@@ -1,0 +1,12 @@
+/* Couleur signature d'Atelier Hub : prune #9a3e6c (6,4:1 avec du texte blanc), icône Lucide « layout-dashboard »
+   (docs/SUITE.md §1.6 et §1.7 d'Atelier Projets). La valeur n'est pas encore dans la source commune
+   (atelier-brand.css, copie verbatim) : elle est déclarée ici. À reporter en --atelier-sig-hub dans
+   Atelier_Projets/design-system/brand/ et le portail (Atelier_Deploy/portail/server.mjs) lors de la prochaine
+   mise à jour de la marque ; ce fichier ne fera alors plus que l'activer.
+   La signature ne sert qu'à l'accent : bouton principal plein, sélection, focus, liens, icône de l'app. */
+:root {
+  --atelier-sig-hub: #9a3e6c;
+}
+[data-atelier-app="hub"] {
+  --atelier-signature: var(--atelier-sig-hub);
+}

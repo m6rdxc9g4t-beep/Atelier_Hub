@@ -1,0 +1,944 @@
+{
+ "projects": [
+  {
+   "id": 2,
+   "slug": "cloture-annuelle-2026",
+   "name": "Clôture annuelle 2026",
+   "description": "Calendrier et pièces de la clôture des comptes.",
+   "keywords": "",
+   "projets_id": null,
+   "projets_name": null,
+   "wiki_space_id": null,
+   "wiki_space": null,
+   "tab_project": null,
+   "created_at": "2026-11-10T10:03:49.021Z",
+   "updated_at": "2026-11-10T10:03:49.021Z"
+  },
+  {
+   "id": 1,
+   "slug": "kpi-cgo",
+   "name": "KPI CGO",
+   "description": "Interface des indicateurs du contrôle de gestion : alimentation SAP, tableau de bord mensuel, alertes et comité.",
+   "keywords": "KPI CGO, CGO",
+   "projets_id": "4",
+   "projets_name": "KPI CGO",
+   "wiki_space_id": "7",
+   "wiki_space": "KPI CGO",
+   "tab_project": "KPI CGO",
+   "created_at": "2026-11-10T10:03:49.013Z",
+   "updated_at": "2026-11-10T10:03:49.021Z"
+  }
+ ],
+ "overviews": {
+  "1": {
+   "project": {
+    "id": 1,
+    "slug": "kpi-cgo",
+    "name": "KPI CGO",
+    "description": "Interface des indicateurs du contrôle de gestion : alimentation SAP, tableau de bord mensuel, alertes et comité.",
+    "keywords": "KPI CGO, CGO",
+    "projets_id": "4",
+    "projets_name": "KPI CGO",
+    "wiki_space_id": "7",
+    "wiki_space": "KPI CGO",
+    "tab_project": "KPI CGO",
+    "created_at": "2026-11-10T10:03:49.013Z",
+    "updated_at": "2026-11-10T10:03:49.021Z"
+   },
+   "links": [
+    {
+     "id": 4,
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "data_analyst",
+     "label": "Data Analyst / Power BI",
+     "note": "",
+     "position": 0
+    },
+    {
+     "id": 1,
+     "app": "source",
+     "kind": "presentation",
+     "ref": "https://exemple.sharepoint.com/sites/cgo/Comite-pilotage.pptx",
+     "label": "Support du comité de pilotage",
+     "note": "Mis à jour avant chaque comité",
+     "position": 0
+    },
+    {
+     "id": 2,
+     "app": "source",
+     "kind": "database",
+     "ref": "SAP BW · cube 0COPA_C01",
+     "label": "Entrepôt BW — rentabilité",
+     "note": "Extraction mensuelle",
+     "position": 1
+    },
+    {
+     "id": 3,
+     "app": "source",
+     "kind": "folder",
+     "ref": "~/Documents/CGO/Extractions",
+     "label": "Extractions brutes",
+     "note": "",
+     "position": 2
+    }
+   ],
+   "kpis": {
+    "hours_spent": 66.5,
+    "hours_estimated": 100,
+    "features_total": 6,
+    "features_done": 2,
+    "active": 6,
+    "blocked": 1,
+    "next_due": {
+     "label": "Écart d’arrondi sur le total trimestriel",
+     "date": "2026-11-13",
+     "kind": "item"
+    }
+   },
+   "projets": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:4174/?projet=4",
+    "project_name": "KPI CGO",
+    "features": [
+     {
+      "id": "101",
+      "type": "FEATURE",
+      "status": "CLOSED",
+      "title": "Connexion aux extractions SAP",
+      "story": "Alimentation",
+      "hours_spent": 14,
+      "hours_estimated": 12,
+      "progress": 100,
+      "start": "2026-10-05",
+      "due": "2026-10-16",
+      "url": "http://127.0.0.1:4174/?projet=4&element=101"
+     },
+     {
+      "id": "102",
+      "type": "FEATURE",
+      "status": "CLOSED",
+      "title": "Modèle de données des indicateurs",
+      "story": "Alimentation",
+      "hours_spent": 22,
+      "hours_estimated": 20,
+      "progress": 100,
+      "start": "2026-10-12",
+      "due": "2026-10-30",
+      "url": "http://127.0.0.1:4174/?projet=4&element=102"
+     },
+     {
+      "id": "103",
+      "type": "FEATURE",
+      "status": "IN_PROGRESS",
+      "title": "Tableau de bord mensuel",
+      "story": "Restitution",
+      "hours_spent": 18.5,
+      "hours_estimated": 24,
+      "progress": 70,
+      "start": "2026-10-27",
+      "due": "2026-11-21",
+      "url": "http://127.0.0.1:4174/?projet=4&element=103"
+     },
+     {
+      "id": "104",
+      "type": "FEATURE",
+      "status": "IN_PROGRESS",
+      "title": "Alertes sur écarts budgétaires",
+      "story": "Restitution",
+      "hours_spent": 4,
+      "hours_estimated": 12,
+      "progress": 25,
+      "start": "2026-11-09",
+      "due": "2026-11-28",
+      "url": "http://127.0.0.1:4174/?projet=4&element=104"
+     },
+     {
+      "id": "105",
+      "type": "FEATURE",
+      "status": "OPEN",
+      "title": "Export PowerPoint du comité",
+      "story": "Restitution",
+      "hours_spent": 0,
+      "hours_estimated": 10,
+      "progress": 0,
+      "start": "2026-11-23",
+      "due": "2026-12-05",
+      "url": "http://127.0.0.1:4174/?projet=4&element=105"
+     },
+     {
+      "id": "106",
+      "type": "FEATURE",
+      "status": "OPEN",
+      "title": "Commentaires des contrôleurs",
+      "story": "Collaboration",
+      "hours_spent": 0,
+      "hours_estimated": 8,
+      "progress": 0,
+      "start": "2026-12-01",
+      "due": "2026-12-12",
+      "url": "http://127.0.0.1:4174/?projet=4&element=106"
+     }
+    ],
+    "active": [
+     {
+      "id": "203",
+      "type": "TASK",
+      "status": "BLOCKED",
+      "title": "Seuils d’alerte par centre de coût",
+      "story": "Restitution",
+      "hours_spent": 1,
+      "hours_estimated": 3,
+      "progress": 20,
+      "start": "2026-11-09",
+      "due": "2026-11-20",
+      "url": "http://127.0.0.1:4174/?projet=4&element=203"
+     },
+     {
+      "id": "201",
+      "type": "TASK",
+      "status": "IN_REVIEW",
+      "title": "Recetter les taux de marge avec la DAF",
+      "story": "Restitution",
+      "hours_spent": 3,
+      "hours_estimated": 4,
+      "progress": 80,
+      "start": "2026-11-05",
+      "due": "2026-11-14",
+      "url": "http://127.0.0.1:4174/?projet=4&element=201"
+     },
+     {
+      "id": "301",
+      "type": "BUG",
+      "status": "IN_PROGRESS",
+      "title": "Écart d’arrondi sur le total trimestriel",
+      "story": "Restitution",
+      "hours_spent": 1.5,
+      "hours_estimated": 2,
+      "progress": 50,
+      "start": "2026-11-09",
+      "due": "2026-11-13",
+      "url": "http://127.0.0.1:4174/?projet=4&element=301"
+     },
+     {
+      "id": "202",
+      "type": "TASK",
+      "status": "IN_PROGRESS",
+      "title": "Ajouter le filtre par business unit",
+      "story": "Restitution",
+      "hours_spent": 2.5,
+      "hours_estimated": 3,
+      "progress": 60,
+      "start": "2026-11-10",
+      "due": "2026-11-18",
+      "url": "http://127.0.0.1:4174/?projet=4&element=202"
+     },
+     {
+      "id": "103",
+      "type": "FEATURE",
+      "status": "IN_PROGRESS",
+      "title": "Tableau de bord mensuel",
+      "story": "Restitution",
+      "hours_spent": 18.5,
+      "hours_estimated": 24,
+      "progress": 70,
+      "start": "2026-10-27",
+      "due": "2026-11-21",
+      "url": "http://127.0.0.1:4174/?projet=4&element=103"
+     },
+     {
+      "id": "104",
+      "type": "FEATURE",
+      "status": "IN_PROGRESS",
+      "title": "Alertes sur écarts budgétaires",
+      "story": "Restitution",
+      "hours_spent": 4,
+      "hours_estimated": 12,
+      "progress": 25,
+      "start": "2026-11-09",
+      "due": "2026-11-28",
+      "url": "http://127.0.0.1:4174/?projet=4&element=104"
+     }
+    ],
+    "milestones": [
+     {
+      "id": "9",
+      "name": "Cadrage validé",
+      "date": "2026-10-03",
+      "reached": true
+     },
+     {
+      "id": "10",
+      "name": "Comité de pilotage",
+      "date": "2026-11-26",
+      "reached": false
+     },
+     {
+      "id": "11",
+      "name": "Mise en production",
+      "date": "2026-12-15",
+      "reached": false
+     }
+    ],
+    "items_total": 11
+   },
+   "wiki": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:3200/",
+    "space": "KPI CGO",
+    "mode": "space",
+    "items": [
+     {
+      "id": "41",
+      "title": "Dictionnaire des indicateurs",
+      "space": "KPI CGO",
+      "excerpt": null,
+      "updated_at": "2026-11-09T16:20:00+01:00",
+      "url": "http://127.0.0.1:3200/p/41",
+      "pinned": false
+     },
+     {
+      "id": "42",
+      "title": "Règles de calcul de la marge",
+      "space": "KPI CGO",
+      "excerpt": null,
+      "updated_at": "2026-11-06T10:05:00+01:00",
+      "url": "http://127.0.0.1:3200/p/42",
+      "pinned": false
+     },
+     {
+      "id": "43",
+      "title": "Sources de données SAP et BW",
+      "space": "KPI CGO",
+      "excerpt": null,
+      "updated_at": "2026-11-03T09:40:00+01:00",
+      "url": "http://127.0.0.1:3200/p/43",
+      "pinned": false
+     },
+     {
+      "id": "45",
+      "title": "Procédure de rafraîchissement mensuel",
+      "space": "KPI CGO",
+      "excerpt": null,
+      "updated_at": "2026-10-28T18:12:00+01:00",
+      "url": "http://127.0.0.1:3200/p/45",
+      "pinned": false
+     },
+     {
+      "id": "44",
+      "title": "Compte rendu du comité du 15 octobre",
+      "space": "KPI CGO",
+      "excerpt": null,
+      "updated_at": "2026-10-16T08:30:00+02:00",
+      "url": "http://127.0.0.1:3200/p/44",
+      "pinned": false
+     }
+    ]
+   },
+   "sources": {
+    "items": [
+     {
+      "id": "link-1",
+      "kind": "presentation",
+      "label": "Support du comité de pilotage",
+      "location": "https://exemple.sharepoint.com/sites/cgo/Comite-pilotage.pptx",
+      "url": "https://exemple.sharepoint.com/sites/cgo/Comite-pilotage.pptx",
+      "origin": "manual",
+      "detail": "Mis à jour avant chaque comité",
+      "link_id": 1
+     },
+     {
+      "id": "link-2",
+      "kind": "database",
+      "label": "Entrepôt BW — rentabilité",
+      "location": "SAP BW · cube 0COPA_C01",
+      "url": null,
+      "origin": "manual",
+      "detail": "Extraction mensuelle",
+      "link_id": 2
+     },
+     {
+      "id": "link-3",
+      "kind": "folder",
+      "label": "Extractions brutes",
+      "location": "~/Documents/CGO/Extractions",
+      "url": null,
+      "origin": "manual",
+      "detail": null,
+      "link_id": 3
+     },
+     {
+      "id": "projets-github-4",
+      "kind": "repo",
+      "label": "Dépôt GitHub",
+      "location": "https://github.com/exemple/kpi-cgo",
+      "url": "https://github.com/exemple/kpi-cgo",
+      "origin": "projets",
+      "detail": "Depuis Atelier Projets",
+      "link_id": null
+     },
+     {
+      "id": "projets-local-4",
+      "kind": "folder",
+      "label": "Dépôt local",
+      "location": "~/Projets/kpi-cgo",
+      "url": null,
+      "origin": "projets",
+      "detail": "Depuis Atelier Projets",
+      "link_id": null
+     },
+     {
+      "id": "viz-d1",
+      "kind": "database",
+      "label": "kpi_cgo_indicateurs",
+      "location": "Atelier Viz · jeu « kpi_cgo_indicateurs »",
+      "url": "http://127.0.0.1:8000/#/donnees",
+      "origin": "viz",
+      "detail": "Jeu de données Viz · 18 420 lignes",
+      "link_id": null
+     },
+     {
+      "id": "viz-d2",
+      "kind": "database",
+      "label": "kpi_cgo_budget_2026",
+      "location": "Atelier Viz · jeu « kpi_cgo_budget_2026 »",
+      "url": "http://127.0.0.1:8000/#/donnees",
+      "origin": "viz",
+      "detail": "Jeu de données Viz · 412 lignes",
+      "link_id": null
+     }
+    ]
+   },
+   "tab": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:4175/",
+    "items": [
+     {
+      "id": "t-realise",
+      "name": "Réalisé mensuel",
+      "project": "KPI CGO",
+      "rows": 1280,
+      "updated_at": "2026-11-09T19:30:00+01:00",
+      "url": "http://127.0.0.1:4175/",
+      "pinned": false
+     },
+     {
+      "id": "t-budget",
+      "name": "Budget 2026 par centre de coût",
+      "project": "KPI CGO",
+      "rows": 412,
+      "updated_at": "2026-11-08T11:00:00+01:00",
+      "url": "http://127.0.0.1:4175/",
+      "pinned": false
+     },
+     {
+      "id": "t-centres",
+      "name": "Référentiel des centres",
+      "project": "KPI CGO",
+      "rows": 64,
+      "updated_at": "2026-10-21T09:00:00+02:00",
+      "url": "http://127.0.0.1:4175/",
+      "pinned": false
+     }
+    ]
+   },
+   "viz": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:8000/#/",
+    "items": [
+     {
+      "id": "a1b2c3d4e5f6",
+      "name": "KPI CGO — Tableau mensuel",
+      "detail": "3 pages · 18 visuels",
+      "updated_at": "2026-11-09T17:45:00+01:00",
+      "url": "http://127.0.0.1:8000/#/rapports/a1b2c3d4e5f6",
+      "pinned": false
+     },
+     {
+      "id": "b2c3d4e5f6a1",
+      "name": "KPI CGO — Écarts budgétaires",
+      "detail": "2 pages · 9 visuels",
+      "updated_at": "2026-11-07T12:10:00+01:00",
+      "url": "http://127.0.0.1:8000/#/rapports/b2c3d4e5f6a1",
+      "pinned": false
+     }
+    ]
+   },
+   "convert": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:8010/#/historique",
+    "items": [
+     {
+      "id": "c00000000001",
+      "name": "Extraction SAP octobre",
+      "detected": "Classeur Excel · 1 280 lignes",
+      "rows": 1280,
+      "created_at": "2026-11-04T08:50:00+01:00",
+      "sent_to": [
+       "Réalisé mensuel"
+      ],
+      "url": "http://127.0.0.1:8010/#/conversions/c00000000001",
+      "pinned": false
+     },
+     {
+      "id": "c00000000002",
+      "name": "Balance générale KPI CGO T3",
+      "detected": "Tableau PDF · 214 lignes",
+      "rows": 214,
+      "created_at": "2026-10-08T14:20:00+02:00",
+      "sent_to": [],
+      "url": "http://127.0.0.1:8010/#/conversions/c00000000002",
+      "pinned": false
+     }
+    ]
+   },
+   "nexus": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:3100/",
+    "items": [
+     {
+      "name": "data_analyst",
+      "display_name": "Data Analyst / Power BI",
+      "description": "Exploration des données, DAX, modèle en étoile.",
+      "category": "Données",
+      "reasons": [
+       "Viz",
+       "Tab",
+       "Convert"
+      ],
+      "score": 3,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=data_analyst",
+      "pinned": true
+     },
+     {
+      "name": "orchestrateur",
+      "display_name": "Orchestrateur",
+      "description": "Lit Viz, Projets et Tab, délègue et assemble.",
+      "category": "Général",
+      "reasons": [
+       "Projets",
+       "Viz",
+       "Tab"
+      ],
+      "score": 3,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=orchestrateur",
+      "pinned": false
+     },
+     {
+      "name": "developpeur",
+      "display_name": "Développeur",
+      "description": "Branches, commits #ID, PR brouillons.",
+      "category": "Développement",
+      "reasons": [
+       "Projets",
+       "GitHub"
+      ],
+      "score": 2,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=developpeur",
+      "pinned": false
+     },
+     {
+      "name": "tableur",
+      "display_name": "Tableur",
+      "description": "Totaux, formules, échéances dans les tables.",
+      "category": "Données",
+      "reasons": [
+       "Tab",
+       "Convert"
+      ],
+      "score": 2,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=tableur",
+      "pinned": false
+     },
+     {
+      "name": "chef_de_projet",
+      "display_name": "Chef de projet",
+      "description": "Points d’avancement, saisie de temps, statuts.",
+      "category": "Gestion de projet",
+      "reasons": [
+       "Projets",
+       "Tab"
+      ],
+      "score": 2,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=chef_de_projet",
+      "pinned": false
+     },
+     {
+      "name": "redacteur",
+      "display_name": "Rédacteur",
+      "description": "Courriels, comptes rendus, documentation.",
+      "category": "Communication",
+      "reasons": [
+       "Wiki"
+      ],
+      "score": 1,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=redacteur",
+      "pinned": false
+     },
+     {
+      "name": "product_owner",
+      "display_name": "Product Owner",
+      "description": "User stories, critères d’acceptation, estimations.",
+      "category": "Gestion de projet",
+      "reasons": [
+       "Projets"
+      ],
+      "score": 1,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=product_owner",
+      "pinned": false
+     }
+    ]
+   },
+   "generated_at": "2026-11-10T10:03:49.055Z"
+  },
+  "2": {
+   "project": {
+    "id": 2,
+    "slug": "cloture-annuelle-2026",
+    "name": "Clôture annuelle 2026",
+    "description": "Calendrier et pièces de la clôture des comptes.",
+    "keywords": "",
+    "projets_id": null,
+    "projets_name": null,
+    "wiki_space_id": null,
+    "wiki_space": null,
+    "tab_project": null,
+    "created_at": "2026-11-10T10:03:49.021Z",
+    "updated_at": "2026-11-10T10:03:49.021Z"
+   },
+   "links": [],
+   "kpis": null,
+   "projets": {
+    "state": "off",
+    "message": "Aucun projet d’Atelier Projets n’est rattaché à cette fiche.",
+    "url": "http://127.0.0.1:4174/",
+    "project_name": null,
+    "features": [],
+    "active": [],
+    "milestones": [],
+    "items_total": 0
+   },
+   "wiki": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:3200/",
+    "space": null,
+    "mode": "search",
+    "items": []
+   },
+   "sources": {
+    "items": []
+   },
+   "tab": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:4175/",
+    "items": []
+   },
+   "viz": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:8000/#/",
+    "items": []
+   },
+   "convert": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:8010/#/historique",
+    "items": []
+   },
+   "nexus": {
+    "state": "ok",
+    "message": "Aucun agent ne lit encore les apps de cette fiche.",
+    "url": "http://127.0.0.1:3100/",
+    "items": []
+   },
+   "generated_at": "2026-11-10T10:03:49.055Z"
+  }
+ },
+ "catalogs": {
+  "projets": {
+   "state": "ok",
+   "message": null,
+   "candidates": [
+    {
+     "app": "projets",
+     "kind": "project",
+     "ref": "4",
+     "label": "KPI CGO",
+     "detail": "Indicateurs du contrôle de gestion",
+     "bind": true
+    },
+    {
+     "app": "projets",
+     "kind": "project",
+     "ref": "5",
+     "label": "Refonte du site",
+     "detail": null,
+     "bind": true
+    }
+   ]
+  },
+  "wiki": {
+   "state": "ok",
+   "message": null,
+   "candidates": [
+    {
+     "app": "wiki",
+     "kind": "space",
+     "ref": "1",
+     "label": "Général",
+     "detail": "14 pages",
+     "bind": true
+    },
+    {
+     "app": "wiki",
+     "kind": "space",
+     "ref": "7",
+     "label": "KPI CGO",
+     "detail": "5 pages",
+     "bind": true
+    }
+   ]
+  },
+  "viz": {
+   "state": "ok",
+   "message": null,
+   "candidates": [
+    {
+     "app": "viz",
+     "kind": "report",
+     "ref": "a1b2c3d4e5f6",
+     "label": "KPI CGO — Tableau mensuel",
+     "detail": "Rapport · 3 pages",
+     "bind": false
+    },
+    {
+     "app": "viz",
+     "kind": "report",
+     "ref": "b2c3d4e5f6a1",
+     "label": "KPI CGO — Écarts budgétaires",
+     "detail": "Rapport · 2 pages",
+     "bind": false
+    },
+    {
+     "app": "viz",
+     "kind": "report",
+     "ref": "c3d4e5f6a1b2",
+     "label": "Ventes 2026",
+     "detail": "Rapport · 4 pages",
+     "bind": false
+    },
+    {
+     "app": "viz",
+     "kind": "dataset",
+     "ref": "d1",
+     "label": "kpi_cgo_indicateurs",
+     "detail": "Jeu de données · 18 420 lignes",
+     "bind": false
+    },
+    {
+     "app": "viz",
+     "kind": "dataset",
+     "ref": "d2",
+     "label": "kpi_cgo_budget_2026",
+     "detail": "Jeu de données · 412 lignes",
+     "bind": false
+    },
+    {
+     "app": "viz",
+     "kind": "dataset",
+     "ref": "d3",
+     "label": "ventes_2026",
+     "detail": "Jeu de données · 573 lignes",
+     "bind": false
+    }
+   ]
+  },
+  "tab": {
+   "state": "ok",
+   "message": null,
+   "candidates": [
+    {
+     "app": "tab",
+     "kind": "project",
+     "ref": "KPI CGO",
+     "label": "KPI CGO",
+     "detail": "Projet Tab",
+     "bind": true
+    },
+    {
+     "app": "tab",
+     "kind": "project",
+     "ref": "Maison",
+     "label": "Maison",
+     "detail": "Projet Tab",
+     "bind": true
+    },
+    {
+     "app": "tab",
+     "kind": "table",
+     "ref": "t-budget",
+     "label": "Budget 2026 par centre de coût",
+     "detail": "KPI CGO · 412 lignes",
+     "bind": false
+    },
+    {
+     "app": "tab",
+     "kind": "table",
+     "ref": "t-realise",
+     "label": "Réalisé mensuel",
+     "detail": "KPI CGO · 1 280 lignes",
+     "bind": false
+    },
+    {
+     "app": "tab",
+     "kind": "table",
+     "ref": "t-centres",
+     "label": "Référentiel des centres",
+     "detail": "KPI CGO · 64 lignes",
+     "bind": false
+    },
+    {
+     "app": "tab",
+     "kind": "table",
+     "ref": "t-courses",
+     "label": "Courses",
+     "detail": "Maison · 35 lignes",
+     "bind": false
+    }
+   ]
+  },
+  "convert": {
+   "state": "ok",
+   "message": null,
+   "candidates": [
+    {
+     "app": "convert",
+     "kind": "conversion",
+     "ref": "c00000000001",
+     "label": "Extraction SAP octobre",
+     "detail": "Classeur Excel · 1 280 lignes",
+     "bind": false
+    },
+    {
+     "app": "convert",
+     "kind": "conversion",
+     "ref": "c00000000002",
+     "label": "Balance générale KPI CGO T3",
+     "detail": "Tableau PDF · 214 lignes",
+     "bind": false
+    },
+    {
+     "app": "convert",
+     "kind": "conversion",
+     "ref": "c00000000003",
+     "label": "Relevé bancaire octobre",
+     "detail": "Relevé bancaire · 42 opérations",
+     "bind": false
+    }
+   ]
+  },
+  "nexus": {
+   "state": "ok",
+   "message": null,
+   "candidates": [
+    {
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "assistant",
+     "label": "Assistant Atelier",
+     "detail": "Général",
+     "bind": false
+    },
+    {
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "orchestrateur",
+     "label": "Orchestrateur",
+     "detail": "Général",
+     "bind": false
+    },
+    {
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "redacteur",
+     "label": "Rédacteur",
+     "detail": "Communication",
+     "bind": false
+    },
+    {
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "data_analyst",
+     "label": "Data Analyst / Power BI",
+     "detail": "Données",
+     "bind": false
+    },
+    {
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "tableur",
+     "label": "Tableur",
+     "detail": "Données",
+     "bind": false
+    },
+    {
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "chef_de_projet",
+     "label": "Chef de projet",
+     "detail": "Gestion de projet",
+     "bind": false
+    },
+    {
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "product_owner",
+     "label": "Product Owner",
+     "detail": "Gestion de projet",
+     "bind": false
+    },
+    {
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "developpeur",
+     "label": "Développeur",
+     "detail": "Développement",
+     "bind": false
+    },
+    {
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "finance",
+     "label": "Finance",
+     "detail": "Finance",
+     "bind": false
+    },
+    {
+     "app": "nexus",
+     "kind": "agent",
+     "ref": "juridique",
+     "label": "Juridique",
+     "detail": "Métiers",
+     "bind": false
+    }
+   ]
+  }
+ },
+ "first": 1,
+ "other": 2
+}

@@ -1,0 +1,66 @@
+// Base SQLite du Hub : les fiches projet et ce qui leur est rattaché.
+// Le Hub ne recopie aucune donnée des autres apps : il garde seulement des références (identifiants, chemins, adresses)
+// et relit les apps à chaque affichage. Migrations : on n'en modifie jamais une publiée, on en ajoute une.
+
+import Database from 'better-sqlite3'
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
+
+export type Db = Database.Database
+
+const MIGRATIONS: readonly string[] = [
+  // 1 — fiches projet et éléments rattachés
+  `
+  CREATE TABLE projects (
+    id            INTEGER PRIMARY KEY,
+    slug          TEXT NOT NULL UNIQUE,
+    name          TEXT NOT NULL,
+    description   TEXT NOT NULL DEFAULT '',
+    keywords      TEXT NOT NULL DEFAULT '',
+    projets_id    TEXT,
+    projets_name  TEXT,
+    wiki_space_id TEXT,
+    wiki_space    TEXT,
+    tab_project   TEXT,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+  );
+
+  CREATE TABLE links (
+    id          INTEGER PRIMARY KEY,
+    project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    app         TEXT NOT NULL,
+    kind        TEXT NOT NULL,
+    ref         TEXT NOT NULL,
+    label       TEXT NOT NULL,
+    note        TEXT NOT NULL DEFAULT '',
+    position    INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL,
+    UNIQUE (project_id, app, kind, ref)
+  );
+  CREATE INDEX links_project ON links(project_id, app);
+  `,
+]
+
+export function migrate(db: Db): void {
+  const current = db.pragma('user_version', { simple: true }) as number
+  for (let version = current; version < MIGRATIONS.length; version++) {
+    db.transaction(() => {
+      db.exec(MIGRATIONS[version]!)
+      db.pragma(`user_version = ${version + 1}`)
+    })()
+  }
+}
+
+export function openDatabase(dataDir: string | ':memory:'): Db {
+  let db: Db
+  if (dataDir === ':memory:') db = new Database(':memory:')
+  else {
+    mkdirSync(dataDir, { recursive: true })
+    db = new Database(join(dataDir, 'hub.db'))
+    db.pragma('journal_mode = WAL')
+  }
+  db.pragma('foreign_keys = ON')
+  migrate(db)
+  return db
+}

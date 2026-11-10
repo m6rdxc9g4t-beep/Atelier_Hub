@@ -1,0 +1,24 @@
+/* ==========================================================================
+   Atelier_Projets · Design System — Thème SOMBRE 🌙
+   CSS natif pur (Custom Properties), sans aucune dépendance métier :
+   ce fichier se copie tel quel dans n'importe quelle autre application.
+
+   Base crème / bleu nuit (charte v2, identique à brand/atelier-brand.css) :
+   les apps de la suite utilisent les jetons --atelier-*, mêmes valeurs.
+
+   Activation : data-theme="dark" sur <html> (toute la page) ou sur un conteneur.
+   Le sélecteur :root[data-theme="dark"] l'emporte sur le :root du thème clair,
+   quel que soit l'ordre d'import des deux fichiers.
+   ========================================================================== */
+
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-main: #0B1220;       /* Fond principal de l'application      */
+  --bg-surface: #121B2D;    /* Cartes, tableaux, panneaux latéraux  */
+  --bg-elevated: #172238;   /* Modales, menus déroulants, survols   */
+  --text-primary: #E6EAF2;  /* Texte principal                      */
+  --text-muted: #A3AEC2;    /* Texte secondaire, métadonnées        */
+  --border-color: #1F2A40;  /* Bordures fines et séparateurs        */
+}

@@ -1,0 +1,57 @@
+// Aperçu sans la suite : calcule les réponses du Hub contre le double de la suite (test/fixtures/suite.ts) et les
+// écrit dans frontend/src/demo/snapshot.json, que l'interface lit en mode démo (`npm run build:demo`).
+// Usage : npx tsx scripts/demo-snapshot.ts
+
+import { writeFileSync, mkdirSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+import { buildApp } from '../src/app.js'
+import { loadConfig } from '../src/config.js'
+import { openDatabase } from '../src/db/database.js'
+import type { AppId, HubProject } from '../src/domain/types.js'
+import { fakeAppsConfig, fakeSuite } from '../test/fixtures/suite.js'
+
+const suite = fakeSuite()
+const config = { ...loadConfig({ HUB_STATIC_DIR: '' }), apps: fakeAppsConfig(suite.tabDir) }
+const db = openDatabase(':memory:')
+const app = await buildApp({ config, db, fetch: suite.fetch, today: () => '2026-11-10' })
+
+async function call<T>(method: 'GET' | 'POST' | 'PATCH', url: string, payload?: object): Promise<T> {
+  const res = await app.inject({ method, url, payload, headers: { host: '127.0.0.1:3700' } })
+  if (res.statusCode >= 400) throw new Error(`${method} ${url} → ${res.statusCode} ${res.body}`)
+  return JSON.parse(res.body) as T
+}
+
+const kpi = await call<HubProject>('POST', '/api/projects', {
+  name: 'KPI CGO',
+  description: 'Interface des indicateurs du contrôle de gestion : alimentation SAP, tableau de bord mensuel, alertes et comité.',
+  keywords: 'KPI CGO, CGO',
+})
+await call('PATCH', `/api/projects/${kpi.id}`, { projets_id: '4', projets_name: 'KPI CGO', wiki_space_id: '7', wiki_space: 'KPI CGO', tab_project: 'KPI CGO' })
+for (const link of [
+  { app: 'source', kind: 'presentation', ref: 'https://exemple.sharepoint.com/sites/cgo/Comite-pilotage.pptx', label: 'Support du comité de pilotage', note: 'Mis à jour avant chaque comité' },
+  { app: 'source', kind: 'database', ref: 'SAP BW · cube 0COPA_C01', label: 'Entrepôt BW — rentabilité', note: 'Extraction mensuelle' },
+  { app: 'source', kind: 'folder', ref: '~/Documents/CGO/Extractions', label: 'Extractions brutes' },
+  { app: 'nexus', kind: 'agent', ref: 'data_analyst', label: 'Data Analyst / Power BI' },
+] as const) {
+  await call('POST', `/api/projects/${kpi.id}/links`, link)
+}
+
+const cloture = await call<HubProject>('POST', '/api/projects', {
+  name: 'Clôture annuelle 2026',
+  description: 'Calendrier et pièces de la clôture des comptes.',
+})
+
+const projects = await call<HubProject[]>('GET', '/api/projects')
+const overviews = Object.fromEntries(
+  await Promise.all(projects.map(async (p) => [p.id, await call(`GET`, `/api/projects/${p.id}/overview`)] as const)),
+)
+const catalogs = Object.fromEntries(
+  await Promise.all((['projets', 'wiki', 'viz', 'tab', 'convert', 'nexus'] as AppId[]).map(async (a) => [a, await call('GET', `/api/catalog/${a}`)] as const)),
+)
+
+const out = resolve(import.meta.dirname, '..', '..', 'frontend', 'src', 'demo')
+mkdirSync(out, { recursive: true })
+writeFileSync(resolve(out, 'snapshot.json'), `${JSON.stringify({ projects, overviews, catalogs, first: kpi.id, other: cloture.id }, null, 1)}\n`)
+await app.close()
+console.log(`Aperçu écrit : ${resolve(out, 'snapshot.json')}`)
