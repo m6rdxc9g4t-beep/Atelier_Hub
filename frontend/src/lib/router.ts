@@ -1,5 +1,5 @@
-// Routeur minimal (History API) ; en aperçu (fichier autonome), adresses par fragment « #/… ».
-//   /                 accueil : liste des fiches
+// Routeur minimal (History API) ; en aperçu (page publiée), fragment simple « #<slug> » (seul accepté par l'hôte).
+//   /                 accueil : la dernière fiche ouverte
 //   /projet/<slug>    une fiche projet
 
 import { useSyncExternalStore, type MouseEvent } from 'react'
@@ -17,9 +17,14 @@ export function parseRoute(path: string): Route {
 }
 
 export const projectPath = (slug: string) => `/projet/${slug}`
-export const href = (path: string) => (HASH_MODE ? `#${path}` : path)
+const toHash = (path: string) => `#${path.replace(/^\/projet\//, '').replace(/^\/$/, '')}`
+export const href = (path: string) => (HASH_MODE ? toHash(path) : path)
 
-const currentPath = () => (HASH_MODE ? location.hash.replace(/^#/, '') || '/' : location.pathname)
+const currentPath = () => {
+  if (!HASH_MODE) return location.pathname
+  const slug = location.hash.replace(/^#/, '')
+  return slug ? `/projet/${slug}` : '/'
+}
 
 const listeners = new Set<() => void>()
 const emit = () => {
@@ -31,8 +36,9 @@ window.addEventListener('hashchange', emit)
 export function navigate(to: string, options: { replace?: boolean } = {}): void {
   if (to === currentPath()) return
   if (HASH_MODE) {
-    if (options.replace) history.replaceState(null, '', `#${to}`)
-    else history.pushState(null, '', `#${to}`)
+    const url = toHash(to) === '#' ? location.pathname + location.search : toHash(to)
+    if (options.replace) history.replaceState(null, '', url)
+    else history.pushState(null, '', url)
   } else if (options.replace) history.replaceState(null, '', to)
   else history.pushState(null, '', to)
   window.scrollTo(0, 0)

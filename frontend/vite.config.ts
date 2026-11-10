@@ -24,5 +24,7 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: false,
+    // Aperçu publié comme artifact : les polices y sont acceptées seulement en data:.
+    ...(mode === 'demo' && { assetsInlineLimit: 256 * 1024 }),
   },
 }))
