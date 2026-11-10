@@ -73,7 +73,7 @@ Sur le VPS : les `*_API_URL` restent en bouclage, les `*_URL` deviennent les sou
 
 ## Liens profonds
 
-Wiki (`/p/<id>`), Viz (`#/rapports/<id>`) et Convert (`#/conversions/<id>`) ouvrent déjà l'élément cliqué. Pour **Projets** et **Nexus**, le Hub envoie `?projet=<id>&element=<id>` et `?agent=<nom>` : ces deux apps ouvrent pour l'instant leur accueil, il leur reste à lire ces paramètres au démarrage (Projets : `setProject` + `openWorkItem` du magasin `store/app.ts`). Tab (app de bureau) n'a pas d'adresse par table : le clic ouvre Tab.
+Un clic ouvre l'élément dans son app : Wiki (`/p/<id>`), Viz (`#/rapports/<id>`), Convert (`#/conversions/<id>`), Projets (`?projet=<id>&element=<id>`, fiche de l'élément ouverte) et Nexus (`?agent=<nom>`, conversation avec l'agent). Tab (app de bureau) n'a pas d'adresse par table : le clic ouvre Tab.
 
 ## API du Hub
 

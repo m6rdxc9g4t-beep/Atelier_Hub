@@ -1,6 +1,5 @@
 // Liens profonds vers les apps de la suite : où le navigateur ouvre un élément.
-// Wiki, Viz et Convert savent déjà ouvrir un élément par son adresse ; Projets, Nexus et Tab ouvrent leur accueil
-// tant qu'ils ne lisent pas les paramètres `?projet=…&element=…` et `?agent=…` (voir README, « Liens profonds »).
+// Chaque app ouvre l'élément par son adresse (voir README, « Liens profonds ») ; Tab n'a pas d'adresse par table.
 
 const enc = encodeURIComponent
 
