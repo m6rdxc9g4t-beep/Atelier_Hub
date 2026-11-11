@@ -98,7 +98,8 @@ export function Modal({ title, onClose, children, width = 520, labelId }: { titl
     opener.current ??= document.activeElement instanceof HTMLElement ? document.activeElement : null
     if (!dialog.open) dialog.showModal()
     // `showModal()` place le focus sur le premier bouton (« Fermer ») : le champ marqué `data-autofocus` le reprend.
-    dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus()
+    // Pas au doigt : le clavier de l'écran s'ouvrirait par-dessus la fenêtre avant qu'on ait rien demandé.
+    if (!window.matchMedia('(pointer: coarse)').matches) dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus()
     return () => {
       if (opener.current?.isConnected) opener.current.focus()
     }

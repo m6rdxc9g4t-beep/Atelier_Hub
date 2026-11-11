@@ -1849,6 +1849,57 @@ dialog.dialog::backdrop {
   }
 }
 
+/* ── Au doigt (téléphone, tablette) : cibles d'au moins 40 px, 44 px pour la navigation ─────────────────── */
+@media (pointer: coarse) {
+  .btn,
+  .btn--sm {
+    height: 40px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+  .btn--sm {
+    font-size: 13px;
+  }
+  .btn--icon,
+  .btn--sm.btn--icon {
+    width: 40px;
+    padding: 0;
+  }
+  .btn--sm svg {
+    width: 16px;
+    height: 16px;
+  }
+  .binding,
+  .app-tab {
+    height: 40px;
+  }
+  .binding {
+    padding: 0 12px 0 8px;
+  }
+  .segmented button {
+    height: 40px;
+  }
+  .segmented--icons button {
+    width: 44px;
+  }
+  .frise__label {
+    min-height: 40px;
+  }
+  .nav-link,
+  .menu-item {
+    height: auto;
+    min-height: 44px;
+  }
+  .rows__more {
+    min-height: 44px;
+  }
+  /* Pas de survol au doigt : les actions d'une ligne restent visibles. */
+  .row__action,
+  .row__hint {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
