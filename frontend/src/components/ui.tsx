@@ -72,7 +72,7 @@ export function UiProvider({ children }: { children: ReactNode }) {
             <button type="button" className="btn" onClick={() => answer(false)}>
               Annuler
             </button>
-            <button type="button" className={`btn ${confirmation.danger ? 'btn--danger-solid' : 'btn--primary'}`} onClick={() => answer(true)} autoFocus>
+            <button type="button" className={`btn ${confirmation.danger ? 'btn--danger-solid' : 'btn--primary'}`} onClick={() => answer(true)} data-autofocus>
               {confirmation.confirmLabel}
             </button>
           </div>
@@ -82,13 +82,26 @@ export function UiProvider({ children }: { children: ReactNode }) {
   )
 }
 
-/** Fenêtre modale native (<dialog>) : Échap et clic sur le voile ferment. */
+/**
+ * Fenêtre modale native (<dialog>) : Échap et clic sur le voile ferment. Le focus va à l'élément `data-autofocus`
+ * (l'attribut `autoFocus` de React agit avant l'ouverture, donc sans effet) et revient au déclencheur à la fermeture.
+ */
 export function Modal({ title, onClose, children, width = 520, labelId }: { title: ReactNode; onClose: () => void; children: ReactNode; width?: number; labelId?: string }) {
   const ref = useRef<HTMLDialogElement>(null)
   const id = labelId ?? 'modal-title'
+  const opener = useRef<HTMLElement | null>(null)
   useEffect(() => {
     const dialog = ref.current
-    if (dialog && !dialog.open) dialog.showModal()
+    if (!dialog) return
+    // Qui a ouvert la fenêtre : le focus lui revient à la fermeture (la fenêtre est démontée sans `close()`,
+    // le navigateur ne le rend donc pas de lui-même).
+    opener.current ??= document.activeElement instanceof HTMLElement ? document.activeElement : null
+    if (!dialog.open) dialog.showModal()
+    // `showModal()` place le focus sur le premier bouton (« Fermer ») : le champ marqué `data-autofocus` le reprend.
+    dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus()
+    return () => {
+      if (opener.current?.isConnected) opener.current.focus()
+    }
   }, [])
   return (
     <dialog

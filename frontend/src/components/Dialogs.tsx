@@ -146,7 +146,7 @@ export function LinkDialog({ overview, initialApp, onClose, onChanged }: { overv
         <p className="dialog__text">{HINTS[app]}</p>
         <label className="search-field" htmlFor={searchId}>
           <Search aria-hidden />
-          <input id={searchId} className="search-field__input" type="search" placeholder={`Chercher dans ${appName(app)}…`} value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+          <input id={searchId} className="search-field__input" type="search" placeholder={`Chercher dans ${appName(app)}…`} value={q} onChange={(e) => setQ(e.target.value)} data-autofocus />
         </label>
         <div className="picks" aria-live="polite">
           {catalog === null && (
@@ -233,7 +233,7 @@ export function SourceDialog({ projectId, onClose, onChanged }: { projectId: num
             <label className="label" htmlFor={ids.label}>
               Nom
             </label>
-            <input id={ids.label} className="field" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Extraction mensuelle SAP" required maxLength={200} autoFocus />
+            <input id={ids.label} className="field" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Extraction mensuelle SAP" required maxLength={200} data-autofocus />
           </div>
           <div className="form-row">
             <label className="label" htmlFor={ids.location}>
@@ -357,7 +357,7 @@ export function ProjectDialog({
             <label className="label" htmlFor={ids.name}>
               Nom
             </label>
-            <input id={ids.name} className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="KPI CGO" required maxLength={120} autoFocus />
+            <input id={ids.name} className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="KPI CGO" required maxLength={120} data-autofocus />
           </div>
           <div className="form-row">
             <label className="label" htmlFor={ids.description}>
