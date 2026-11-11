@@ -11,10 +11,24 @@ export function count(value: number): string {
   return value.toLocaleString('fr-FR')
 }
 
+const pad = (n: number) => String(n).padStart(2, '0')
+
+/**
+ * Jour `AAAA-MM-JJ` d'une date ou d'un horodatage ISO, dans le fuseau de l'appareil. Les apps écrivent leurs
+ * horodatages en UTC : une page modifiée à 0 h 30 à Paris porte « 23:30Z » la veille, et serait dite « hier ».
+ * Une date seule (échéance, jalon) n'a pas de fuseau : elle est rendue telle quelle.
+ */
+export function localDay(value: string): string {
+  if (value.length <= 10) return value
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value.slice(0, 10)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 /** « 13 nov. », avec l'année si elle diffère de `today`. Accepte `AAAA-MM-JJ` ou un horodatage ISO. */
 export function shortDate(value: string | null | undefined, today: string): string {
   if (!value) return ''
-  const [y, m, d] = value.slice(0, 10).split('-').map(Number)
+  const [y, m, d] = localDay(value).split('-').map(Number)
   if (!y || !m || !d) return ''
   const base = `${d} ${MONTHS[m - 1]}`
   return String(y) === today.slice(0, 4) ? base : `${base} ${y}`
@@ -23,7 +37,7 @@ export function shortDate(value: string | null | undefined, today: string): stri
 /** « aujourd'hui », « hier », « il y a 3 j », sinon la date courte. */
 export function relativeDay(value: string | null | undefined, today: string): string {
   if (!value) return ''
-  const days = Math.round((Date.parse(today.slice(0, 10)) - Date.parse(value.slice(0, 10))) / 86_400_000)
+  const days = Math.round((Date.parse(today.slice(0, 10)) - Date.parse(localDay(value))) / 86_400_000)
   if (Number.isNaN(days)) return ''
   if (days === 0) return 'aujourd’hui'
   if (days === 1) return 'hier'
@@ -33,7 +47,7 @@ export function relativeDay(value: string | null | undefined, today: string): st
 
 /** « dans 3 j », « demain », « aujourd'hui », « en retard de 2 j ». */
 export function dueIn(value: string, today: string): string {
-  const days = Math.round((Date.parse(value.slice(0, 10)) - Date.parse(today.slice(0, 10))) / 86_400_000)
+  const days = Math.round((Date.parse(localDay(value)) - Date.parse(today.slice(0, 10))) / 86_400_000)
   if (Number.isNaN(days)) return ''
   if (days === 0) return 'aujourd’hui'
   if (days === 1) return 'demain'
@@ -42,8 +56,7 @@ export function dueIn(value: string, today: string): string {
 }
 
 export function localToday(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return localDay(new Date().toISOString())
 }
 
 export function plural(n: number, one: string, many: string): string {

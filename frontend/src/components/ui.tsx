@@ -3,6 +3,8 @@
 import { CircleAlert, X } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 
+import { confirmFocus, focusOnOpen, isHeldEnter } from '../lib/dialogs.ts'
+
 interface Toast {
   id: number
   text: string
@@ -51,6 +53,9 @@ export function UiProvider({ children }: { children: ReactNode }) {
     setConfirmation(null)
   }
 
+  // Une suppression ne se confirme pas d'une Entrée de trop : le focus attend sur « Annuler ».
+  const focused = confirmFocus(confirmation?.danger === true)
+
   return (
     <UiContext.Provider value={{ toast, confirm }}>
       {children}
@@ -69,10 +74,15 @@ export function UiProvider({ children }: { children: ReactNode }) {
         <Modal title={confirmation.title} onClose={() => answer(false)} width={420}>
           {confirmation.text && <p className="dialog__text">{confirmation.text}</p>}
           <div className="dialog__actions">
-            <button type="button" className="btn" onClick={() => answer(false)}>
+            <button type="button" className="btn" onClick={() => answer(false)} data-autofocus={focused === 'cancel' ? '' : undefined}>
               Annuler
             </button>
-            <button type="button" className={`btn ${confirmation.danger ? 'btn--danger-solid' : 'btn--primary'}`} onClick={() => answer(true)} autoFocus>
+            <button
+              type="button"
+              className={`btn ${confirmation.danger ? 'btn--danger-solid' : 'btn--primary'}`}
+              onClick={() => answer(true)}
+              data-autofocus={focused === 'confirm' ? '' : undefined}
+            >
               {confirmation.confirmLabel}
             </button>
           </div>
@@ -82,13 +92,28 @@ export function UiProvider({ children }: { children: ReactNode }) {
   )
 }
 
-/** Fenêtre modale native (<dialog>) : Échap et clic sur le voile ferment. */
+/**
+ * Fenêtre modale native (<dialog>) : Échap et clic sur le voile ferment. Le focus va à l'élément `data-autofocus`
+ * (l'attribut `autoFocus` de React agit avant l'ouverture, donc sans effet) et revient au déclencheur à la fermeture.
+ * Règles (focus, touche maintenue) dans `lib/dialogs.ts`.
+ */
 export function Modal({ title, onClose, children, width = 520, labelId }: { title: ReactNode; onClose: () => void; children: ReactNode; width?: number; labelId?: string }) {
   const ref = useRef<HTMLDialogElement>(null)
   const id = labelId ?? 'modal-title'
+  const opener = useRef<HTMLElement | null>(null)
   useEffect(() => {
     const dialog = ref.current
-    if (dialog && !dialog.open) dialog.showModal()
+    if (!dialog) return
+    // Qui a ouvert la fenêtre : le focus lui revient à la fermeture (la fenêtre est démontée sans `close()`,
+    // le navigateur ne le rend donc pas de lui-même).
+    opener.current ??= document.activeElement instanceof HTMLElement ? document.activeElement : null
+    if (!dialog.open) dialog.showModal()
+    // `showModal()` place le focus sur le premier bouton (« Fermer ») : le champ marqué `data-autofocus` le reprend.
+    // Pas au doigt : le clavier de l'écran s'ouvrirait par-dessus la fenêtre avant qu'on ait rien demandé.
+    focusOnOpen<HTMLElement>(dialog, window.matchMedia('(pointer: coarse)').matches)?.focus()
+    return () => {
+      if (opener.current?.isConnected) opener.current.focus()
+    }
   }, [])
   return (
     <dialog
@@ -102,6 +127,10 @@ export function Modal({ title, onClose, children, width = 520, labelId }: { titl
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
+      }}
+      onKeyDown={(e) => {
+        // La touche qui a ouvert la fenêtre, encore enfoncée, n'y clique rien (ni bouton, ni envoi du formulaire).
+        if (isHeldEnter(e, (e.target as HTMLElement).tagName)) e.preventDefault()
       }}
     >
       <div className="dialog__head">

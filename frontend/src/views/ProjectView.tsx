@@ -26,6 +26,7 @@ import { Panel, PanelEmpty, Row, RowList } from '../components/Panel.tsx'
 import { ExtLink } from '../components/ExtLink.tsx'
 import { useUi } from '../components/ui.tsx'
 import { count, dueIn, hours, plural, relativeDay, shortDate, STATUS_LABELS, STATUS_VARS, TYPE_LABELS } from '../lib/format.ts'
+import { clockTime } from '../lib/freshness.ts'
 import { buildTimeline } from '../lib/timeline.ts'
 import type { AppId, HubLink, LinkApp, Overview, SourceItem, SourceKind, WorkItem } from '../lib/types.ts'
 
@@ -550,6 +551,7 @@ function NexusPanel({ overview, actions }: { overview: Overview; actions: Projec
 
 export function ProjectView({ overview, today, actions, refreshing }: { overview: Overview; today: string; actions: ProjectActions; refreshing: boolean }) {
   const p = overview.project
+  const readAt = clockTime(overview.generated_at)
   return (
     <div className="project">
       <header className="project__head">
@@ -558,7 +560,7 @@ export function ProjectView({ overview, today, actions, refreshing }: { overview
           {p.description && <p className="project__desc">{p.description}</p>}
         </div>
         <div className="project__actions">
-          <button type="button" className="btn btn--ghost btn--icon" aria-label="Actualiser" title="Relire les apps" onClick={actions.refresh} disabled={refreshing}>
+          <button type="button" className="btn btn--ghost btn--icon" aria-label="Actualiser" title={readAt ? `Relire les apps (lues à ${readAt})` : 'Relire les apps'} onClick={actions.refresh} disabled={refreshing}>
             <RefreshCw className={refreshing ? 'spin' : undefined} />
           </button>
           <button type="button" className="btn" onClick={actions.edit}>

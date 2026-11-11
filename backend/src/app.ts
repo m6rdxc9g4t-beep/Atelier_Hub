@@ -3,7 +3,7 @@
 import fastifyStatic from '@fastify/static'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 
 import type { HubConfig } from './config.js'
 import type { Fetcher } from './connectors/http.js'
@@ -59,10 +59,21 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   hubRoutes(app, db, suite)
 
   if (config.staticDir && existsSync(join(config.staticDir, 'index.html'))) {
-    await app.register(fastifyStatic, { root: config.staticDir, wildcard: false })
-    // Routeur de l'interface (History API) : toute adresse hors /api renvoie l'interface.
+    const assetsDir = join(config.staticDir, 'assets') + sep
+    await app.register(fastifyStatic, {
+      root: config.staticDir,
+      wildcard: false,
+      // Les fichiers de /assets portent une empreinte dans leur nom : gardés un an sans revalidation.
+      // Le reste (index.html, atelier-theme.js, icône) est revalidé à chaque visite (ETag → 304).
+      setHeaders(reply, path) {
+        reply.header('Cache-Control', path.startsWith(assetsDir) ? 'public, max-age=31536000, immutable' : 'no-cache')
+      },
+    })
+    // Routeur de l'interface (History API) : toute adresse hors /api renvoie l'interface. Un fichier de /assets
+    // absent (onglet resté ouvert pendant une mise à jour) est une vraie 404, pas une page HTML servie comme du code.
     app.setNotFoundHandler((request, reply) => {
-      if (request.method === 'GET' && !request.url.startsWith('/api/')) return reply.sendFile('index.html')
+      const page = (request.method === 'GET' || request.method === 'HEAD') && !request.url.startsWith('/api/') && !request.url.startsWith('/assets/')
+      if (page) return reply.sendFile('index.html')
       return reply.code(404).send({ detail: 'Route inconnue', code: 'NOT_FOUND' })
     })
   } else {

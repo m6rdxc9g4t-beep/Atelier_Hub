@@ -1,5 +1,7 @@
 // Liens profonds vers les apps de la suite : où le navigateur ouvre un élément.
-// Chaque app ouvre l'élément par son adresse (voir README, « Liens profonds ») ; Tab n'a pas d'adresse par table.
+// Chaque app lit son adresse au démarrage : Projets `?projet=…&element=…` (frontend/src/lib/deep-link.ts), Nexus
+// `?agent=…` (Workspace.tsx), Wiki `/p/<id>`, Viz et Convert par fragment. Tab n'a pas d'adresse par table.
+// Changer une forme ici impose de la changer dans l'app lue (voir README, « Liens profonds »).
 
 const enc = encodeURIComponent
 

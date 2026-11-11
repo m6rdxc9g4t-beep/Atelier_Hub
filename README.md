@@ -13,7 +13,7 @@ Une fiche par projet qui rassemble ce que la Suite Atelier en sait, sur un seul 
 | **Viz** | rapports du projet | le rapport dans Atelier Viz |
 | **Nexus** | agents qui savent lire les apps de la fiche, avec la raison (« Lit Viz, Tab ») | l'agent dans Atelier Nexus |
 
-Le Hub ne recopie aucune donnée : il garde des **références** (projet Projets, espace Wiki, projet Tab, éléments épinglés, sources) et relit les apps à chaque ouverture de fiche, en parallèle et avec un délai borné. Une app arrêtée garde son panneau (icône éteinte, message en rouge) et ses éléments épinglés restent cliquables.
+Le Hub ne recopie aucune donnée : il garde des **références** (projet Projets, espace Wiki, projet Tab, éléments épinglés, sources) et relit les apps à chaque ouverture de fiche, en parallèle et avec un délai borné. Quand tu reviens sur l'onglet du Hub après un passage dans une app, la fiche se relit toute seule si sa lecture date de plus de 30 secondes (le bouton « Actualiser » dit l'heure de la dernière lecture). Une app arrêtée garde son panneau (icône éteinte, message en rouge) et ses éléments épinglés restent cliquables.
 
 ## Comment une fiche trouve ses éléments
 
@@ -73,7 +73,17 @@ Sur le VPS : les `*_API_URL` restent en bouclage, les `*_URL` deviennent les sou
 
 ## Liens profonds
 
-Un clic ouvre l'élément dans son app : Wiki (`/p/<id>`), Viz (`#/rapports/<id>`), Convert (`#/conversions/<id>`), Projets (`?projet=<id>&element=<id>`, fiche de l'élément ouverte) et Nexus (`?agent=<nom>`, conversation avec l'agent). Tab (app de bureau) n'a pas d'adresse par table : le clic ouvre Tab.
+Un clic ouvre l'élément dans son app :
+
+| App | Adresse envoyée | Lue par |
+|---|---|---|
+| Projets | `?projet=<id>` et `?projet=<id>&element=<id>` | `frontend/src/lib/deep-link.ts` d'Atelier Projets (projet, puis fiche de l'élément) |
+| Wiki | `/p/<id>` | routeur du Wiki |
+| Viz | `#/rapports/<id>`, `#/donnees` | routeur de Viz |
+| Convert | `#/conversions/<id>`, `#/historique` | routeur de Convert |
+| Nexus | `?agent=<nom>` | `Workspace.tsx` d'Atelier Nexus (conversation avec cet agent) |
+
+Tab (app de bureau) n'a pas d'adresse par table : le clic ouvre Tab. Toutes ces adresses sont construites à un seul endroit, `backend/src/domain/links.ts`.
 
 ## API du Hub
 

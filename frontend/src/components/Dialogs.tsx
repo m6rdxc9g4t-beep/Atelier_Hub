@@ -1,12 +1,13 @@
 // Fenêtres de la fiche : « Lier » (rattacher ou épingler depuis une app), « Ajouter une source », fiche (créer / modifier).
 
 import { Check, Search } from 'lucide-react'
-import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from 'react'
 
 import { SOURCE_LABELS } from '../lib/format.ts'
 import { api } from '../lib/hub-api.ts'
 import type { ProjectInput } from '../lib/api.ts'
 import { appName } from '../lib/suite.ts'
+import { tabTarget } from '../lib/tabs.ts'
 import type { AppId, Candidate, Catalog, HubProject, Overview, SourceKind } from '../lib/types.ts'
 import { AppTile } from './AppGlyph.tsx'
 import { Modal, useUi } from './ui.tsx'
@@ -54,7 +55,22 @@ export function LinkDialog({ overview, initialApp, onClose, onChanged }: { overv
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const searchId = useId()
+  const tabsId = useId()
   const projectId = overview.project.id
+
+  const selectApp = (next: AppId) => {
+    setApp(next)
+    setQ('')
+  }
+  /** Onglets au clavier : ← → changent d'app, Début / Fin vont aux extrémités ; Tab passe à la recherche. */
+  const onTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const target = tabTarget(event.key, LINK_APPS.indexOf(app), LINK_APPS.length)
+    if (target === null) return
+    event.preventDefault()
+    const next = LINK_APPS[target]!
+    selectApp(next)
+    document.getElementById(`${tabsId}-${next}`)?.focus()
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -125,58 +141,60 @@ export function LinkDialog({ overview, initialApp, onClose, onChanged }: { overv
   return (
     <Modal title="Lier à la fiche" onClose={onClose} width={560} labelId="link-title">
       <div className="dialog__body">
-        <div className="app-tabs" role="tablist" aria-label="App de la suite">
+        <div className="app-tabs" role="tablist" aria-label="App de la suite" onKeyDown={onTabKey}>
           {LINK_APPS.map((a) => (
             <button
               key={a}
               type="button"
               role="tab"
+              id={`${tabsId}-${a}`}
               aria-selected={a === app}
+              aria-controls={`${tabsId}-panneau`}
+              tabIndex={a === app ? 0 : -1}
               className="app-tab"
-              onClick={() => {
-                setApp(a)
-                setQ('')
-              }}
+              onClick={() => selectApp(a)}
             >
               <AppTile id={a} />
               {SHORT[a]}
             </button>
           ))}
         </div>
-        <p className="dialog__text">{HINTS[app]}</p>
-        <label className="search-field" htmlFor={searchId}>
-          <Search aria-hidden />
-          <input id={searchId} className="search-field__input" type="search" placeholder={`Chercher dans ${appName(app)}…`} value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
-        </label>
-        <div className="picks" aria-live="polite">
-          {catalog === null && (
-            <>
-              <div className="skeleton" />
-              <div className="skeleton skeleton--short" />
-            </>
-          )}
-          {catalog?.state === 'down' && <p className="panel__down">{catalog.message}</p>}
-          {catalog?.state === 'ok' && catalog.candidates.length === 0 && <p className="dialog__text">Rien ne correspond.</p>}
-          {binds.length > 0 && (
-            <>
-              <p className="picks__heading">
-                {app === 'wiki' ? 'Espaces' : 'Projets'}
-                {bound && (
-                  <button type="button" className="link-btn" onClick={() => void unbind()}>
-                    Retirer le rattachement
-                  </button>
-                )}
-              </p>
-              <ul className="picks__list">{binds.map(renderCandidate)}</ul>
-            </>
-          )}
-          {pins.length > 0 && (
-            <>
-              {binds.length > 0 && <p className="picks__heading">{app === 'wiki' ? 'Pages' : 'Tables'}</p>}
-              <ul className="picks__list">{pins.map(renderCandidate)}</ul>
-            </>
-          )}
-          {app === 'wiki' && !q && catalog?.state === 'ok' && <p className="picks__note">Tape un mot pour chercher une page à épingler.</p>}
+        <div role="tabpanel" id={`${tabsId}-panneau`} aria-labelledby={`${tabsId}-${app}`}>
+          <p className="dialog__text">{HINTS[app]}</p>
+          <label className="search-field" htmlFor={searchId}>
+            <Search aria-hidden />
+            <input id={searchId} className="search-field__input" type="search" placeholder={`Chercher dans ${appName(app)}…`} value={q} onChange={(e) => setQ(e.target.value)} data-autofocus />
+          </label>
+          <div className="picks" aria-live="polite">
+            {catalog === null && (
+              <>
+                <div className="skeleton" />
+                <div className="skeleton skeleton--short" />
+              </>
+            )}
+            {catalog?.state === 'down' && <p className="panel__down">{catalog.message}</p>}
+            {catalog?.state === 'ok' && catalog.candidates.length === 0 && <p className="dialog__text">Rien ne correspond.</p>}
+            {binds.length > 0 && (
+              <>
+                <p className="picks__heading">
+                  {app === 'wiki' ? 'Espaces' : 'Projets'}
+                  {bound && (
+                    <button type="button" className="link-btn" onClick={() => void unbind()}>
+                      Retirer le rattachement
+                    </button>
+                  )}
+                </p>
+                <ul className="picks__list">{binds.map(renderCandidate)}</ul>
+              </>
+            )}
+            {pins.length > 0 && (
+              <>
+                {binds.length > 0 && <p className="picks__heading">{app === 'wiki' ? 'Pages' : 'Tables'}</p>}
+                <ul className="picks__list">{pins.map(renderCandidate)}</ul>
+              </>
+            )}
+            {app === 'wiki' && !q && catalog?.state === 'ok' && <p className="picks__note">Tape un mot pour chercher une page à épingler.</p>}
+          </div>
         </div>
       </div>
       <div className="dialog__actions">
@@ -233,7 +251,7 @@ export function SourceDialog({ projectId, onClose, onChanged }: { projectId: num
             <label className="label" htmlFor={ids.label}>
               Nom
             </label>
-            <input id={ids.label} className="field" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Extraction mensuelle SAP" required maxLength={200} autoFocus />
+            <input id={ids.label} className="field" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Extraction mensuelle SAP" required maxLength={200} data-autofocus />
           </div>
           <div className="form-row">
             <label className="label" htmlFor={ids.location}>
@@ -357,7 +375,7 @@ export function ProjectDialog({
             <label className="label" htmlFor={ids.name}>
               Nom
             </label>
-            <input id={ids.name} className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="KPI CGO" required maxLength={120} autoFocus />
+            <input id={ids.name} className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="KPI CGO" required maxLength={120} data-autofocus />
           </div>
           <div className="form-row">
             <label className="label" htmlFor={ids.description}>
@@ -379,12 +397,15 @@ export function ProjectDialog({
               Supprimer la fiche
             </button>
           )}
-          <button type="button" className="btn" onClick={onClose}>
-            Annuler
-          </button>
-          <button type="submit" className="btn btn--primary" disabled={saving || !name.trim()}>
-            {project ? 'Enregistrer' : 'Créer la fiche'}
-          </button>
+          {/* Groupe insécable : dans une fenêtre étroite il passe entier sous « Supprimer la fiche ». */}
+          <div className="dialog__group">
+            <button type="button" className="btn" onClick={onClose}>
+              Annuler
+            </button>
+            <button type="submit" className="btn btn--primary" disabled={saving || !name.trim()}>
+              {project ? 'Enregistrer' : 'Créer la fiche'}
+            </button>
+          </div>
         </div>
       </form>
     </Modal>
