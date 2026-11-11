@@ -1893,6 +1893,19 @@ dialog.dialog::backdrop {
   .rows__more {
     min-height: 44px;
   }
+  .field:not(textarea),
+  .search-field {
+    height: 44px;
+  }
+  .chip {
+    height: 40px;
+    padding: 0 14px;
+  }
+  .link-btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
   /* Pas de survol au doigt : les actions d'une ligne restent visibles. */
   .row__action,
   .row__hint {
