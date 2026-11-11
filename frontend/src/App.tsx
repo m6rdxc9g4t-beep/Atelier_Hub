@@ -2,6 +2,7 @@
 
 import { CircleAlert, LayoutDashboard, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 
 import { LinkDialog, ProjectDialog, SourceDialog } from './components/Dialogs.tsx'
 import { AboutDialog, Sidebar, Topbar } from './components/Shell.tsx'
@@ -89,12 +90,18 @@ function Hub() {
     }
   }, [])
 
+  // Par identifiant, pas par objet : recharger la liste des fiches (actualisation, épinglage) ne relit pas les apps
+  // une seconde fois. Une fiche modifiée est relue par celui qui l'a modifiée (`refresh`, `onSaved`).
+  const currentId = current?.id ?? null
+  const currentSlug = current?.slug ?? null
   useEffect(() => {
-    if (!current) return
-    writeLast(current.slug)
-    setOverview((o) => (o?.project.id === current.id ? o : null))
-    void loadOverview(current.id)
-  }, [current, loadOverview])
+    if (currentSlug !== null) writeLast(currentSlug)
+  }, [currentSlug])
+  useEffect(() => {
+    if (currentId === null) return
+    setOverview((o) => (o?.project.id === currentId ? o : null))
+    void loadOverview(currentId)
+  }, [currentId, loadOverview])
 
   const refresh = useCallback(async () => {
     if (!current) return
@@ -193,16 +200,27 @@ function Hub() {
           project={dialog.project}
           onClose={() => setDialog(null)}
           onSaved={(saved) => {
-            void loadProjects().then(() => {
-              navigate(projectPath(saved.slug), { replace: dialog.project !== null })
-              void loadOverview(saved.id, true)
+            const edited = dialog.project !== null
+            // La liste et l'adresse changent dans le même rendu : pas de « Fiche introuvable » le temps de relire la liste
+            // quand le nom (donc l'adresse) a changé.
+            flushSync(() => {
+              setProjects((list) => (edited ? list.map((p) => (p.id === saved.id ? saved : p)) : [...list, saved]))
+              navigate(projectPath(saved.slug), { replace: edited })
             })
+            // Une nouvelle fiche est lue à son ouverture ; une fiche modifiée garde son identifiant : on la relit ici.
+            if (edited) void loadOverview(saved.id, true)
+            void loadProjects()
             toast(dialog.project ? 'Fiche enregistrée' : `Fiche « ${saved.name} » créée`)
           }}
           onDeleted={() => {
+            const removed = dialog.project?.id
             toast('Fiche supprimée')
-            setOverview(null)
-            void loadProjects().then(() => navigate('/', { replace: true }))
+            flushSync(() => {
+              setOverview(null)
+              setProjects((list) => list.filter((p) => p.id !== removed))
+              navigate('/', { replace: true })
+            })
+            void loadProjects()
           }}
         />
       )}
