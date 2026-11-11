@@ -20,31 +20,36 @@ export interface HttpContext {
 
 export async function requestJson(ctx: HttpContext, url: string, init: { method?: 'GET' | 'POST'; body?: unknown } = {}): Promise<unknown> {
   const controller = new AbortController()
+  // Le délai couvre toute la lecture, corps compris : une app qui envoie ses en-têtes puis se fige ne bloque pas la fiche.
   const timer = setTimeout(() => controller.abort(), ctx.timeoutMs)
-  let response: Response
+  const unavailable = () => new AppUnavailable('down', controller.signal.aborted ? 'ne répond pas à temps' : 'ne répond pas')
   try {
-    response = await ctx.fetch(url, {
-      method: init.method ?? 'GET',
-      headers: { accept: 'application/json', ...(init.body !== undefined && { 'content-type': 'application/json' }) },
-      ...(init.body !== undefined && { body: JSON.stringify(init.body) }),
-      signal: controller.signal,
-    })
-  } catch {
-    throw new AppUnavailable('down', controller.signal.aborted ? 'ne répond pas à temps' : 'ne répond pas')
+    let response: Response
+    try {
+      response = await ctx.fetch(url, {
+        method: init.method ?? 'GET',
+        headers: { accept: 'application/json', ...(init.body !== undefined && { 'content-type': 'application/json' }) },
+        ...(init.body !== undefined && { body: JSON.stringify(init.body) }),
+        signal: controller.signal,
+      })
+    } catch {
+      throw unavailable()
+    }
+    let body: unknown = null
+    try {
+      body = await response.json()
+    } catch {
+      if (controller.signal.aborted) throw unavailable()
+      if (response.ok) throw new AppUnavailable('error', 'réponse illisible')
+    }
+    if (!response.ok) {
+      const detail = typeof body === 'object' && body !== null && 'detail' in body && typeof body.detail === 'string' ? body.detail : `HTTP ${response.status}`
+      throw new AppUnavailable('error', detail)
+    }
+    return body
   } finally {
     clearTimeout(timer)
   }
-  let body: unknown = null
-  try {
-    body = await response.json()
-  } catch {
-    if (response.ok) throw new AppUnavailable('error', 'réponse illisible')
-  }
-  if (!response.ok) {
-    const detail = typeof body === 'object' && body !== null && 'detail' in body && typeof body.detail === 'string' ? body.detail : `HTTP ${response.status}`
-    throw new AppUnavailable('error', detail)
-  }
-  return body
 }
 
 export function describeFailure(app: string, error: unknown): string {
