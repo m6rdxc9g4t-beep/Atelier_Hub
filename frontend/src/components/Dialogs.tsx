@@ -7,6 +7,7 @@ import { SOURCE_LABELS } from '../lib/format.ts'
 import { api } from '../lib/hub-api.ts'
 import type { ProjectInput } from '../lib/api.ts'
 import { appName } from '../lib/suite.ts'
+import { tabTarget } from '../lib/tabs.ts'
 import type { AppId, Candidate, Catalog, HubProject, Overview, SourceKind } from '../lib/types.ts'
 import { AppTile } from './AppGlyph.tsx'
 import { Modal, useUi } from './ui.tsx'
@@ -63,12 +64,10 @@ export function LinkDialog({ overview, initialApp, onClose, onChanged }: { overv
   }
   /** Onglets au clavier : ← → changent d'app, Début / Fin vont aux extrémités ; Tab passe à la recherche. */
   const onTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    const index = LINK_APPS.indexOf(app)
-    const moves: Record<string, number> = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: LINK_APPS.length - 1 }
-    const target = moves[event.key]
-    if (target === undefined) return
+    const target = tabTarget(event.key, LINK_APPS.indexOf(app), LINK_APPS.length)
+    if (target === null) return
     event.preventDefault()
-    const next = LINK_APPS[(target + LINK_APPS.length) % LINK_APPS.length]!
+    const next = LINK_APPS[target]!
     selectApp(next)
     document.getElementById(`${tabsId}-${next}`)?.focus()
   }
