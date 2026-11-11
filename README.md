@@ -13,7 +13,7 @@ Une fiche par projet qui rassemble ce que la Suite Atelier en sait, sur un seul 
 | **Viz** | rapports du projet | le rapport dans Atelier Viz |
 | **Nexus** | agents qui savent lire les apps de la fiche, avec la raison (« Lit Viz, Tab ») | l'agent dans Atelier Nexus |
 
-Le Hub ne recopie aucune donnée : il garde des **références** (projet Projets, espace Wiki, projet Tab, éléments épinglés, sources) et relit les apps à chaque ouverture de fiche, en parallèle et avec un délai borné. Une app arrêtée garde son panneau (icône éteinte, message en rouge) et ses éléments épinglés restent cliquables.
+Le Hub ne recopie aucune donnée : il garde des **références** (projet Projets, espace Wiki, projet Tab, éléments épinglés, sources) et relit les apps à chaque ouverture de fiche, en parallèle et avec un délai borné. Quand tu reviens sur l'onglet du Hub après un passage dans une app, la fiche se relit toute seule si sa lecture date de plus de 30 secondes (le bouton « Actualiser » dit l'heure de la dernière lecture). Une app arrêtée garde son panneau (icône éteinte, message en rouge) et ses éléments épinglés restent cliquables.
 
 ## Comment une fiche trouve ses éléments
 

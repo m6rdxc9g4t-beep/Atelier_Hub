@@ -8,13 +8,14 @@ import { LinkDialog, ProjectDialog, SourceDialog } from './components/Dialogs.ts
 import { AboutDialog, Sidebar, Topbar } from './components/Shell.tsx'
 import { UiProvider, useUi } from './components/ui.tsx'
 import { localToday } from './lib/format.ts'
+import { shouldRefresh } from './lib/freshness.ts'
 import { api } from './lib/hub-api.ts'
 import { href, navigate, onLinkClick, projectPath, useRoute } from './lib/router.ts'
 import type { AppId, HubLink, HubProject, Overview } from './lib/types.ts'
 import { ProjectView, type ProjectActions } from './views/ProjectView.tsx'
 
 /** L'aperçu est figé au 10 novembre 2026 (date des données d'exemple). */
-const TODAY = api.demo ? '2026-11-10' : localToday()
+const currentDay = () => (api.demo ? '2026-11-10' : localToday())
 
 const LAST_KEY = 'atelier-hub:derniere-fiche'
 function readLast(): string | null {
@@ -43,6 +44,10 @@ function Hub() {
   const [overview, setOverview] = useState<Overview | null>(null)
   const [overviewError, setOverviewError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  // Date du jour relevée à chaque lecture : un onglet gardé ouvert plusieurs jours ne décale pas les échéances.
+  const [today, setToday] = useState(currentDay)
+  const loadedAt = useRef<number | null>(null)
+  const loading = useRef(false)
   const [dialog, setDialog] = useState<DialogState>(null)
   const [navOpen, setNavOpen] = useState(false)
   const loadSeq = useRef(0)
@@ -75,20 +80,32 @@ function Hub() {
     navigate(projectPath(last.slug), { replace: true })
   }, [route.name, projects])
 
-  const loadOverview = useCallback(async (projectId: number, quiet = false) => {
+  /**
+   * `quiet` : la fiche reste affichée pendant la relecture. Un échec est alors dit par un message (la fiche à l'écran
+   * masquerait l'erreur), sauf pour la relecture automatique (`silent`), qui réessaiera au prochain retour.
+   */
+  const loadOverview = useCallback(async (projectId: number, quiet = false, silent = false) => {
     const seq = ++loadSeq.current
+    loading.current = true
     if (quiet) setRefreshing(true)
     try {
       const data = await api.overview(projectId)
       if (seq !== loadSeq.current) return
+      loadedAt.current = Date.now()
+      setToday(currentDay())
       setOverview(data)
       setOverviewError(null)
     } catch (error) {
-      if (seq === loadSeq.current) setOverviewError((error as Error).message)
+      if (seq !== loadSeq.current) return
+      setOverviewError((error as Error).message)
+      if (quiet && !silent) toast(`Actualisation impossible : ${(error as Error).message}`, 'danger')
     } finally {
-      if (seq === loadSeq.current) setRefreshing(false)
+      if (seq === loadSeq.current) {
+        loading.current = false
+        setRefreshing(false)
+      }
     }
-  }, [])
+  }, [toast])
 
   // Par identifiant, pas par objet : recharger la liste des fiches (actualisation, épinglage) ne relit pas les apps
   // une seconde fois. Une fiche modifiée est relue par celui qui l'a modifiée (`refresh`, `onSaved`).
@@ -101,6 +118,21 @@ function Hub() {
     if (currentId === null) return
     setOverview((o) => (o?.project.id === currentId ? o : null))
     void loadOverview(currentId)
+  }, [currentId, loadOverview])
+
+  // Retour sur l'onglet (on revient d'une app ouverte depuis la fiche) : relecture discrète si la lecture date.
+  useEffect(() => {
+    if (currentId === null || api.demo) return
+    const onReturn = () => {
+      const state = { visible: document.visibilityState === 'visible', busy: loading.current, loadedAt: loadedAt.current }
+      if (shouldRefresh(state, Date.now())) void loadOverview(currentId, true, true)
+    }
+    document.addEventListener('visibilitychange', onReturn)
+    window.addEventListener('focus', onReturn)
+    return () => {
+      document.removeEventListener('visibilitychange', onReturn)
+      window.removeEventListener('focus', onReturn)
+    }
   }, [currentId, loadOverview])
 
   const refresh = useCallback(async () => {
@@ -167,7 +199,7 @@ function Hub() {
       </div>
     )
   } else if (overview && current && overview.project.id === current.id) {
-    main = <ProjectView overview={overview} today={TODAY} actions={actions} refreshing={refreshing} />
+    main = <ProjectView overview={overview} today={today} actions={actions} refreshing={refreshing} />
   } else if (overviewError) {
     main = <ErrorState text={overviewError} onRetry={() => current && void loadOverview(current.id)} />
   } else {
