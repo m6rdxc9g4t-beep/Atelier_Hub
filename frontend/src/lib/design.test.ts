@@ -12,6 +12,17 @@ describe('charte de la suite', () => {
     assert.doesNotMatch(css, /\b(rgb|rgba|hsl|hsla|oklch)\(/i)
   })
 
+  it('les actions d’une fenêtre passent à la ligne au lieu de sortir de la fenêtre', () => {
+    const css = withoutComments(read('../styles/hub.css'))
+    for (const selector of ['.dialog__actions', '.dialog__group']) {
+      const rule = css.match(new RegExp(`(?:^|})\\s*\\${selector}\\s*{([^}]*)}`))
+      assert.ok(rule, `${selector} est déclaré`)
+      assert.match(rule[1]!, /flex-wrap:\s*wrap\s*;/, `${selector} : flex-wrap`)
+    }
+    // Annuler et le bouton principal restent ensemble sous « Supprimer la fiche ».
+    assert.match(read('../components/Dialogs.tsx'), /dialog__left[\s\S]*?className="dialog__group"/)
+  })
+
   it('la signature du Hub est déclarée et activée', () => {
     const css = read('../styles/hub-signature.css')
     assert.match(css, /--atelier-sig-hub:\s*#9a3e6c/)

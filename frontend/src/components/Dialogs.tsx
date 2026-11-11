@@ -398,12 +398,15 @@ export function ProjectDialog({
               Supprimer la fiche
             </button>
           )}
-          <button type="button" className="btn" onClick={onClose}>
-            Annuler
-          </button>
-          <button type="submit" className="btn btn--primary" disabled={saving || !name.trim()}>
-            {project ? 'Enregistrer' : 'Créer la fiche'}
-          </button>
+          {/* Groupe insécable : dans une fenêtre étroite il passe entier sous « Supprimer la fiche ». */}
+          <div className="dialog__group">
+            <button type="button" className="btn" onClick={onClose}>
+              Annuler
+            </button>
+            <button type="submit" className="btn btn--primary" disabled={saving || !name.trim()}>
+              {project ? 'Enregistrer' : 'Créer la fiche'}
+            </button>
+          </div>
         </div>
       </form>
     </Modal>

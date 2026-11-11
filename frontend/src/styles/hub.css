@@ -612,11 +612,19 @@ dialog.dialog::backdrop {
   color: var(--app-muted);
   line-height: 1.5;
 }
+/* Les actions passent à la ligne plutôt que de sortir de la fenêtre (téléphone, boutons élargis au doigt). */
 .dialog__actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   padding: 16px 20px 20px;
+}
+.dialog__group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .atelier-about__close svg {
