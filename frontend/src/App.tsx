@@ -10,6 +10,7 @@ import { UiProvider, useUi } from './components/ui.tsx'
 import { localToday } from './lib/format.ts'
 import { shouldRefresh } from './lib/freshness.ts'
 import { api } from './lib/hub-api.ts'
+import { failureFeedback, refreshFailure, refreshProject, type ListRead } from './lib/refresh.ts'
 import { href, navigate, onLinkClick, projectPath, useRoute } from './lib/router.ts'
 import type { AppId, HubLink, HubProject, Overview } from './lib/types.ts'
 import { ProjectView, type ProjectActions } from './views/ProjectView.tsx'
@@ -52,15 +53,16 @@ function Hub() {
   const [navOpen, setNavOpen] = useState(false)
   const loadSeq = useRef(0)
 
-  const loadProjects = useCallback(async () => {
+  const loadProjects = useCallback(async (): Promise<ListRead<HubProject>> => {
     try {
       const list = await api.listProjects()
       setProjects(list)
       setProjectsError(null)
-      return list
+      return { ok: true, list }
     } catch (error) {
-      setProjectsError((error as Error).message)
-      return null
+      const message = (error as Error).message
+      setProjectsError(message)
+      return { ok: false, message }
     } finally {
       setProjectsLoading(false)
     }
@@ -82,12 +84,15 @@ function Hub() {
 
   /**
    * `quiet` : la fiche reste affichée pendant la relecture. Un échec est alors dit par un message (la fiche à l'écran
-   * masquerait l'erreur), sauf pour la relecture automatique (`silent`), qui réessaiera au prochain retour.
+   * masquerait l'erreur), sauf pour la relecture automatique (`silent`), qui réessaiera au prochain retour : voir
+   * `failureFeedback`. Une lecture à l'écran (ouverture, « Réessayer ») repart sans erreur : le chargement s'affiche,
+   * jamais l'échec d'une lecture précédente.
    */
   const loadOverview = useCallback(async (projectId: number, quiet = false, silent = false) => {
     const seq = ++loadSeq.current
     loading.current = true
     if (quiet) setRefreshing(true)
+    else setOverviewError(null)
     try {
       const data = await api.overview(projectId)
       if (seq !== loadSeq.current) return
@@ -97,8 +102,10 @@ function Hub() {
       setOverviewError(null)
     } catch (error) {
       if (seq !== loadSeq.current) return
-      setOverviewError((error as Error).message)
-      if (quiet && !silent) toast(`Actualisation impossible : ${(error as Error).message}`, 'danger')
+      const message = (error as Error).message
+      const feedback = failureFeedback(quiet, silent)
+      if (feedback.screen) setOverviewError(message)
+      if (feedback.toast) toast(refreshFailure(message), 'danger')
     } finally {
       if (seq === loadSeq.current) {
         loading.current = false
@@ -136,11 +143,13 @@ function Hub() {
   }, [currentId, loadOverview])
 
   const refresh = useCallback(async () => {
-    if (!current) return
-    const list = await loadProjects()
-    const still = list?.find((p) => p.id === current.id)
-    if (still) await loadOverview(still.id, true)
-  }, [current, loadProjects, loadOverview])
+    if (currentId === null) return
+    await refreshProject(currentId, {
+      readList: loadProjects,
+      readOverview: (id) => loadOverview(id, true),
+      notify: (text) => toast(text, 'danger'),
+    })
+  }, [currentId, loadProjects, loadOverview, toast])
 
   const actions: ProjectActions = {
     link: (app) => setDialog({ kind: 'link', app }),
