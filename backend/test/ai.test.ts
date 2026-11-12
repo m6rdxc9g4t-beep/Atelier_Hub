@@ -312,6 +312,16 @@ describe('rédaction avec Ollama', () => {
     assert.match(ollama.calls[1]!.messages[3]!.content, /Réécris seulement cette diapositive/)
   })
 
+  it('à la relance, un modèle qui renvoie toutes les diapositives ne donne pas à la fautive le texte d’une autre', async () => {
+    const ollama = fakeOllama([answer([1, KPIS_TEXT], [2, 'Déjà 75 % du chemin.']), answer([1, KPIS_TEXT], [2, 'Toujours 75 %.'])])
+    const ctx = await setup(fakeAi({ ollama }))
+    const [kpis, milestones] = [ctx.of('kpis'), ctx.of('milestones')]
+    const { body } = await ctx.write({ slide_ids: [kpis.id, milestones.id] })
+    assert.deepEqual([body.written, body.kept], [[kpis.id], [{ slide_id: milestones.id, reason: 'chiffre non vérifiable : 75 %' }]])
+    // Les jalons gardent leur phrase automatique : le texte des chiffres clés (juste, mais d'une autre diapositive) n'y va pas.
+    assert.deepEqual([ctx.of('kpis').body, ctx.of('milestones').body], [KPIS_TEXT, null])
+  })
+
   it('réponse illisible : la diapositive est gardée telle quelle', async () => {
     const ollama = fakeOllama(['Je ne sais pas.', '{"diapositives": [{"n": 1, "texte": '])
     const ctx = await setup(fakeAi({ ollama }))

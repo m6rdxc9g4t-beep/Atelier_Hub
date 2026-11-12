@@ -105,6 +105,10 @@ describe('contrôle d’une réponse', () => {
     const one = [SLIDES[1]!]
     assert.deepEqual(checkWriting(answer([7, 'La recette est le 15 décembre 2026.']), one, GENERAL).texts, [{ id: 12, body: 'La recette est le 15 décembre 2026.' }])
     assert.deepEqual(checkWriting('{"texte":"La recette est le 15 décembre 2026."}', one, GENERAL).texts, [{ id: 12, body: 'La recette est le 15 décembre 2026.' }])
+    // Mais l'entrée qui porte son numéro l'emporte sur la première venue : à la relance, un modèle qui renvoie toutes
+    // les diapositives ne donne pas à la diapositive fautive le texte d'une autre.
+    assert.deepEqual(checkWriting(answer([1, '63 % des features.'], [2, 'La recette est le 15 décembre 2026.']), one, GENERAL).texts, [{ id: 12, body: 'La recette est le 15 décembre 2026.' }])
+    assert.deepEqual(checkWriting(answer([1, '63 % des features.'], [2, 'Tenu à 75 %.']), one, GENERAL), { texts: [], errors: [{ n: 2, id: 12, message: 'cite « 75 % », absent des faits', reason: 'chiffre non vérifiable : 75 %' }] })
     // Avec plusieurs diapositives, un numéro inconnu est ignoré, un numéro manquant est une erreur.
     const draft = checkWriting(answer([1, '63 % des features.'], [9, 'Intrus.'], [1, 'Doublon ignoré.']), SLIDES, GENERAL)
     assert.deepEqual(draft.texts, [{ id: 11, body: '63 % des features.' }])

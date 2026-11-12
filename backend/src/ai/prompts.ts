@@ -165,7 +165,11 @@ export function checkWriting(raw: string, slides: readonly WriteSlide[], general
       draft.errors.push(failed(slide, 'la réponse n’est pas l’objet JSON demandé', 'réponse illisible'))
       continue
     }
-    const entry = slides.length === 1 ? found.find((item) => typeof item?.texte === 'string') : found.find((item) => item?.n === slide.n)
+    // Une seule diapositive demandée : l'entrée qui porte son numéro, sinon la première (un petit modèle numérote mal).
+    // Jamais la première quand son numéro est là : à la relance, un modèle qui renvoie toutes les diapositives
+    // donnerait à la diapositive fautive le texte d'une autre.
+    const numbered = found.find((item) => item?.n === slide.n)
+    const entry = slides.length === 1 ? (typeof numbered?.texte === 'string' ? numbered : found.find((item) => typeof item?.texte === 'string')) : numbered
     const cleaned = typeof entry?.texte === 'string' ? cleanText(entry.texte) : ''
     if (!cleaned) {
       draft.errors.push(failed(slide, 'aucun texte', 'aucun texte proposé'))
