@@ -5,7 +5,7 @@ import type { FastifyInstance } from 'fastify'
 
 import type { Db } from '../db/database.js'
 import { SLIDE_KINDS } from '../domain/types.js'
-import { createDeck, type PresentationInput } from '../services/decks.js'
+import { createDeck, readDeck, type PresentationInput } from '../services/decks.js'
 import type { SuiteContext } from '../services/overview.js'
 import {
   addSlide,
@@ -80,6 +80,9 @@ export function presentationRoutes(app: FastifyInstance, db: Db, suite: SuiteCon
       return createDeck(db, suite, request.params.id, request.body ?? {})
     },
   )
+
+  // Présentation résolue : les apps sont relues à chaque lecture.
+  app.get<{ Params: { pid: number } }>('/api/presentations/:pid', { schema: { params: deckParam } }, async (request) => readDeck(db, suite, request.params.pid))
 
   app.patch<{ Params: { pid: number }; Body: { title: string } }>('/api/presentations/:pid', { schema: { params: deckParam, body: renameBody } }, async (request) =>
     renamePresentation(db, request.params.pid, request.body.title),

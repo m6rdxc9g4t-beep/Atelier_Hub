@@ -1,37 +1,16 @@
 import assert from 'node:assert/strict'
-import { after, describe, it } from 'node:test'
+import { describe, it } from 'node:test'
 
-import { buildApp } from '../src/app.js'
-import { loadConfig, type HubConfig } from '../src/config.js'
 import { migrate, openDatabase } from '../src/db/database.js'
-import type { HubProject, PresentationSummary, SlideRecord } from '../src/domain/types.js'
+import type { Deck, HubProject, PresentationSummary, SlideRecord } from '../src/domain/types.js'
 import { LIMITS, listSlides } from '../src/services/presentations.js'
-import { fakeAppsConfig, fakeSuite } from './fixtures/suite.js'
-
-const apps: Awaited<ReturnType<typeof buildApp>>[] = []
-after(async () => {
-  for (const app of apps) await app.close()
-})
-
-type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
-interface Failure {
-  detail: string
-  code: string
-}
+import { kpiCgo, startHub, type Failure } from './fixtures/hub.js'
+import { WORK_ITEMS } from './fixtures/suite.js'
 
 async function setup() {
-  const suite = fakeSuite()
-  const base = loadConfig({ HUB_STATIC_DIR: '', HUB_DATA_DIR: '/tmp/inutilise' })
-  const config: HubConfig = { ...base, apps: fakeAppsConfig(suite.tabDir) }
-  const db = openDatabase(':memory:')
-  const app = await buildApp({ config, db, fetch: suite.fetch, today: () => '2026-11-10' })
-  apps.push(app)
-  const call = async <T>(method: Method, url: string, payload?: unknown, headers: Record<string, string> = {}) => {
-    const response = await app.inject({ method, url, payload: payload as object, headers: { host: '127.0.0.1:3700', ...headers } })
-    return { status: response.statusCode, body: (response.body ? JSON.parse(response.body) : null) as T }
-  }
-  const project = (await call<HubProject>('POST', '/api/projects', { name: 'KPI CGO', description: 'Interface KPI du contrôle de gestion' })).body
-  return { db, call, suite, project }
+  const hub = await startHub()
+  const project = (await hub.call<HubProject>('POST', '/api/projects', { name: 'KPI CGO', description: 'Interface KPI du contrôle de gestion' })).body
+  return { ...hub, project }
 }
 
 /** Présentation vide (sa seule diapositive de titre) : les règles de stockage ne dépendent pas du plan. */
@@ -311,5 +290,170 @@ describe('diapositives', () => {
     reset()
     await ctx.call('DELETE', `/api/presentations/${a.id}/slides/${slide.id}`)
     assert.ok(stamp() > '2026-01-01')
+  })
+})
+
+// ─── « Générer » sans IA : le plan bâti sur la fiche, la présentation relue avec les chiffres du jour ─────────
+
+const table = (name: string, rows: Record<string, unknown>[]) => ({ format: 'atelier-table/1', name, label: name, columns: [], rows, total: rows.length, truncated: false })
+const REPORT = { app: 'viz', kind: 'report', ref: 'a1b2c3d4e5f6', label: 'KPI CGO — Tableau mensuel' }
+const PLAN = ['title', 'summary', 'kpis', 'features', 'active', 'milestones', 'wiki', 'viz', 'viz', 'tab', 'convert', 'nexus', 'sources']
+
+async function generated() {
+  const hub = await startHub()
+  const project = await kpiCgo(hub)
+  await hub.call('POST', `/api/projects/${project.id}/links`, REPORT)
+  const created = await hub.call<PresentationSummary>('POST', `/api/projects/${project.id}/presentations`)
+  assert.equal(created.status, 201)
+  const read = async () => {
+    const res = await hub.call<Deck>('GET', `/api/presentations/${created.body.id}`)
+    assert.equal(res.status, 200)
+    return res.body
+  }
+  const stored = () => JSON.stringify([hub.db.prepare('SELECT * FROM presentations').all(), hub.db.prepare('SELECT * FROM slides ORDER BY id').all()])
+  const slide = (deck: Deck, kind: string, ref: string | null = null) => deck.slides.find((s) => s.kind === kind && s.ref === ref)!
+  return { ...hub, project, presentation: created.body, read, stored, slide }
+}
+
+describe('« Générer » sans IA', () => {
+  it('bâtit la présentation sur la fiche et n’enregistre rien de vivant', async () => {
+    const ctx = await generated()
+    assert.deepEqual([ctx.presentation.title, ctx.presentation.slides, ctx.presentation.project_id], ['KPI CGO — novembre 2026', PLAN.length, ctx.project.id])
+    const records = listSlides(ctx.db, ctx.presentation.id)
+    assert.deepEqual(kinds(records), PLAN)
+    assert.deepEqual(records.map((s) => s.position), PLAN.map((_, i) => i))
+    // Ni titre, ni texte : tout est calculé à la lecture. Seule la diapositive du rapport épinglé porte une référence.
+    for (const s of records) assert.deepEqual([s.title, s.body, s.text_source, s.text_model, s.text_at], [null, null, 'auto', null, null], s.kind)
+    assert.deepEqual(records.filter((s) => s.ref !== null || s.ref_label !== null).map((s) => [s.position, s.kind, s.ref, s.ref_label]), [[8, 'viz', REPORT.ref, REPORT.label]])
+    // Aucun nom, aucun chiffre lu dans une app n'est en base (le libellé du rapport est celui de la fiche, comme `links.label`).
+    const stored = ctx.stored()
+    for (const text of ['Dictionnaire', 'SAP', 'Réalisé', 'Comité de pilotage', 'Écarts', 'Data Analyst', 'Seuils', 'estimées', 'visuels', 'terminées']) assert.ok(!stored.includes(text), text)
+  })
+
+  it('rend la présentation résolue : les diapositives enregistrées et leur partie vivante', async () => {
+    const ctx = await generated()
+    const before = ctx.suite.calls.length
+    const deck = await ctx.read()
+    assert.deepEqual([deck.presentation.id, deck.presentation.title, deck.project.id, deck.project.name], [ctx.presentation.id, 'KPI CGO — novembre 2026', ctx.project.id, 'KPI CGO'])
+    assert.match(deck.generated_at, /^\d{4}-\d\d-\d\dT/)
+    assert.deepEqual(deck.slides.map((s) => s.kind), PLAN)
+    assert.deepEqual(deck.slides.map((s) => s.live.state), PLAN.map(() => 'ok'))
+    assert.ok(deck.slides.every((s) => s.title === null && s.body === null && s.stale.length === 0))
+    assert.deepEqual(deck.slides.map((s) => s.live.auto_title), [
+      'KPI CGO — novembre 2026', 'Synthèse', 'Chiffres clés', 'Avancement des features', 'En cours et points de blocage', 'Jalons',
+      'Documentation', 'Rapports', 'KPI CGO — Tableau mensuel', 'Tables', 'Conversions', 'Agents', 'Sources',
+    ])
+    assert.equal(ctx.slide(deck, 'kpis').live.figures[0]!.value, '66,5 h')
+    assert.ok(deck.slides.every((s) => s.kind === 'text' || s.live.auto_text.length > 0))
+    // Une lecture de la présentation = une lecture de la suite (chaque app une fois).
+    const calls = ctx.suite.calls.slice(before)
+    assert.equal(calls.filter((c) => c === 'GET http://projets/api/atelier/projects/4/work-items').length, 1)
+    assert.equal(calls.filter((c) => c === 'GET http://viz/api/reports').length, 1)
+    assert.equal((await ctx.call('GET', '/api/presentations/999')).status, 404)
+  })
+
+  it('relit les chiffres du jour à chaque lecture, sans rien écrire', async () => {
+    const ctx = await generated()
+    const stored = ctx.stored()
+    const first = await ctx.read()
+    assert.deepEqual(ctx.slide(first, 'kpis').live.figures.map((f) => f.value).slice(0, 2), ['66,5 h', '2 / 6'])
+    assert.equal(ctx.slide(first, 'kpis').live.auto_text, '2 features terminées sur 6 (33 %). 66,5 h passées sur 100 h estimées (67 %).')
+    assert.equal(ctx.slide(first, 'viz', REPORT.ref).live.auto_title, 'KPI CGO — Tableau mensuel')
+
+    // Le lendemain dans les apps : une feature terminée, des heures saisies, le rapport renommé et agrandi.
+    ctx.replaced.set('http://projets/api/atelier/projects/4/work-items', table('work-items', WORK_ITEMS.map((item) => (item.id === 103 ? { ...item, statut_code: 'CLOSED', heures_passees: 30, avancement: 100 } : item))))
+    ctx.replaced.set('http://viz/api/reports', [{ id: REPORT.ref, name: 'KPI CGO — Tableau de bord', pages: 4, visuals: 20, bookmarks: 0, updated_at: '2026-11-11T12:00:00Z' }])
+    const second = await ctx.read()
+    assert.deepEqual(ctx.slide(second, 'kpis').live.figures.map((f) => f.value).slice(0, 2), ['78 h', '3 / 6'])
+    assert.equal(ctx.slide(second, 'kpis').live.auto_text, '3 features terminées sur 6 (50 %). 78 h passées sur 100 h estimées (78 %).')
+    assert.equal(ctx.slide(second, 'features').live.auto_text, '6 features : 3 terminées, 1 en cours, 2 à faire.')
+    assert.match(ctx.slide(second, 'summary').live.auto_text, /^- Avancement : 3 features terminées sur 6 \(50 %\)\./)
+    const report = ctx.slide(second, 'viz', REPORT.ref)
+    assert.deepEqual([report.live.auto_title, report.live.auto_text, report.ref_label], ['KPI CGO — Tableau de bord', '4 pages · 20 visuels, modifié le 11 novembre 2026.', REPORT.label])
+    assert.equal(ctx.slide(second, 'viz').live.auto_text, '1 rapport dans Atelier Viz ; le plus récent : « KPI CGO — Tableau de bord ».')
+    assert.equal(ctx.stored(), stored, 'lire une présentation n’écrit rien')
+  })
+
+  it('un texte écrit à la main reste, à côté des chiffres du jour', async () => {
+    const ctx = await generated()
+    const kpis = ctx.slide(await ctx.read(), 'kpis')
+    await ctx.call('PATCH', `/api/presentations/${ctx.presentation.id}/slides/${kpis.id}`, { title: 'Où en est-on ?', body: 'Le budget tient.' })
+    const slide = ctx.slide(await ctx.read(), 'kpis')
+    assert.deepEqual([slide.title, slide.body, slide.text_source], ['Où en est-on ?', 'Le budget tient.', 'manual'])
+    assert.deepEqual([slide.live.auto_title, slide.live.figures.length], ['Chiffres clés', 4])
+  })
+
+  it('renommer la présentation change le titre de sa diapositive de titre', async () => {
+    const ctx = await generated()
+    assert.equal(ctx.slide(await ctx.read(), 'title').live.auto_title, 'KPI CGO — novembre 2026')
+    await ctx.call('PATCH', `/api/presentations/${ctx.presentation.id}`, { title: 'Comité de pilotage' })
+    const deck = await ctx.read()
+    assert.equal(deck.presentation.title, 'Comité de pilotage')
+    assert.deepEqual([ctx.slide(deck, 'title').live.auto_title, ctx.slide(deck, 'title').title], ['Comité de pilotage', null])
+  })
+
+  it('une app arrêtée donne une diapositive qui le dit, jamais une erreur', async () => {
+    const ctx = await generated()
+    for (const app of ['projets', 'wiki', 'viz', 'convert', 'nexus'] as const) ctx.down.add(app)
+    const deck = await ctx.read()
+    const state = (kind: string, ref: string | null = null) => [ctx.slide(deck, kind, ref).live.state, ctx.slide(deck, kind, ref).live.message]
+    for (const kind of ['kpis', 'features', 'active', 'milestones']) assert.deepEqual(state(kind), ['down', 'Atelier Projets ne répond pas'], kind)
+    assert.deepEqual(state('wiki'), ['down', 'Atelier Wiki ne répond pas'])
+    assert.deepEqual(state('viz'), ['down', 'Atelier Viz ne répond pas'])
+    assert.deepEqual(state('convert'), ['down', 'Atelier Convert ne répond pas'])
+    assert.deepEqual(state('nexus'), ['down', 'Atelier Nexus ne répond pas'])
+    // Ce que la fiche garde reste lisible : le rapport et l'agent épinglés, par leur libellé ; Tab (un fichier) et les sources.
+    const report = ctx.slide(deck, 'viz', REPORT.ref)
+    assert.deepEqual([report.live.state, report.live.auto_title, report.live.rows.map((r) => r.label)], ['down', REPORT.label, [REPORT.label]])
+    assert.deepEqual(ctx.slide(deck, 'nexus').live.rows.map((r) => r.label), ['Data Analyst / Power BI'])
+    assert.deepEqual([ctx.slide(deck, 'kpis').live.figures, ctx.slide(deck, 'kpis').live.auto_text], [[], ''])
+    assert.deepEqual(state('tab'), ['ok', null])
+    assert.deepEqual(state('sources'), ['ok', null])
+    assert.match(ctx.slide(deck, 'summary').live.auto_text, /Atelier Projets, Atelier Wiki, Atelier Viz et Atelier Convert n’ont pas pu être lus/)
+
+    // Les apps reviennent : la même présentation se remplit, sans rien régénérer.
+    ctx.down.clear()
+    const back = await ctx.read()
+    assert.deepEqual(back.slides.map((s) => s.live.state), PLAN.map(() => 'ok'))
+    assert.equal(ctx.slide(back, 'kpis').live.figures.length, 4)
+  })
+
+  it('une app arrêtée le jour de la génération garde sa section, qui se remplit ensuite', async () => {
+    const hub = await startHub()
+    const project = await kpiCgo(hub)
+    await hub.call('POST', `/api/projects/${project.id}/links`, REPORT)
+    for (const app of ['projets', 'wiki', 'viz'] as const) hub.down.add(app)
+    const created = await hub.call<PresentationSummary>('POST', `/api/projects/${project.id}/presentations`)
+    assert.equal(created.status, 201)
+    const records = listSlides(hub.db, created.body.id)
+    assert.deepEqual(kinds(records), PLAN)
+    assert.deepEqual(records.filter((s) => s.ref !== null).map((s) => [s.ref, s.ref_label]), [[REPORT.ref, REPORT.label]])
+    hub.down.clear()
+    const deck = (await hub.call<Deck>('GET', `/api/presentations/${created.body.id}`)).body
+    assert.deepEqual(deck.slides.map((s) => s.live.state), PLAN.map(() => 'ok'))
+  })
+
+  it('présentation vide sur demande ; fiche sans rattachement : titre et synthèse', async () => {
+    const ctx = await setup()
+    const before = ctx.suite.calls.length
+    const empty = await deck(ctx)
+    assert.deepEqual(kinds(listSlides(ctx.db, empty.id)), ['title'])
+    assert.equal(ctx.suite.calls.length, before, 'une présentation vide ne lit aucune app')
+    const other = (await ctx.call<HubProject>('POST', '/api/projects', { name: 'Clôture annuelle 2026' })).body
+    const planned = await ctx.call<PresentationSummary>('POST', `/api/projects/${other.id}/presentations`, { plan: true })
+    assert.deepEqual([planned.status, planned.body.title, planned.body.slides], [201, 'Clôture annuelle 2026 — novembre 2026', 2])
+    assert.deepEqual(kinds(listSlides(ctx.db, planned.body.id)), ['title', 'summary'])
+    const read = (await ctx.call<Deck>('GET', `/api/presentations/${planned.body.id}`)).body
+    assert.deepEqual(read.slides.map((s) => s.live.auto_text), ['Présentation du projet Clôture annuelle 2026.', 'Rien n’est encore rattaché à cette fiche.'])
+  })
+
+  it('une création refusée n’interroge aucune app', async () => {
+    const hub = await startHub()
+    const project = await kpiCgo(hub)
+    const before = hub.suite.calls.length
+    assert.equal((await hub.call('POST', `/api/projects/${project.id}/presentations`, { title: 'x'.repeat(LIMITS.title + 1) })).status, 422)
+    assert.equal((await hub.call('POST', '/api/projects/999/presentations')).status, 404)
+    assert.equal((await hub.call('POST', `/api/projects/${project.id}/presentations`, { plan: 'oui' })).status, 422)
+    assert.equal(hub.suite.calls.length, before)
   })
 })

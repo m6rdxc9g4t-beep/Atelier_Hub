@@ -267,3 +267,57 @@ export interface SlideRecord {
   text_at: string | null
   updated_at: string
 }
+
+/** ok · down : l'app ne répond pas · off : rien de rattaché · missing : l'élément visé n'est plus dans la fiche · none : pas de donnée vivante (texte libre). */
+export type SlideState = 'ok' | 'down' | 'off' | 'missing' | 'none'
+
+/** Carte de chiffres (.atelier-kpi) : textes déjà mis en forme par le Hub. */
+export interface SlideFigure {
+  label: string
+  value: string
+  note: string | null
+  warn: boolean
+}
+
+export interface SlideRow {
+  id: string
+  label: string
+  detail: string | null
+  /** Jour ou horodatage ISO, mis en forme par l'interface. */
+  date: string | null
+  /** Statut du workflow (couleurs officielles), sinon null. */
+  status: string | null
+  url: string | null
+}
+
+/** Partie vivante d'une diapositive : relue dans les apps à chaque lecture, jamais enregistrée. */
+export interface SlideLive {
+  state: SlideState
+  message: string | null
+  app: AppId | null
+  /** Lien « Ouvrir … dans Atelier … » (le rapport, la page, sinon l'app). */
+  url: string | null
+  url_label: string | null
+  figures: SlideFigure[]
+  rows: SlideRow[]
+  /** Éléments non affichés (« et 4 autres »). */
+  more: number
+  /** Titre affiché quand title est null. */
+  auto_title: string
+  /** Phrase(s) déterministe(s) affichée(s) quand body est null. Vide pour `text`. */
+  auto_text: string
+}
+
+export interface DeckSlide extends SlideRecord {
+  live: SlideLive
+  /** Nombres d'un texte d'IA absents des chiffres du jour (toujours [] tant qu'aucun moteur ne rédige). */
+  stale: string[]
+}
+
+/** Présentation résolue : ce qui est enregistré, et la partie vivante de chaque diapositive, relue à l'instant. */
+export interface Deck {
+  presentation: PresentationSummary
+  project: HubProject
+  slides: DeckSlide[]
+  generated_at: string
+}
