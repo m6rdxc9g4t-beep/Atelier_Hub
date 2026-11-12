@@ -4,11 +4,11 @@ import { ArrowLeft, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ReadError, ReadMissing } from '../components/ReadState.tsx'
+import { Slide } from '../components/Slide.tsx'
 import { useUi } from '../components/ui.tsx'
 import { ApiError } from '../lib/api.ts'
-import { shownTitle } from '../lib/deck.ts'
 import { plural } from '../lib/format.ts'
-import { clockTime } from '../lib/freshness.ts'
+import { clockTime, shouldRefresh } from '../lib/freshness.ts'
 import { api } from '../lib/hub-api.ts'
 import { failureFeedback, refreshFailure } from '../lib/refresh.ts'
 import { href, onLinkClick, presentationsPath } from '../lib/router.ts'
@@ -19,6 +19,7 @@ type ReadFailure = { missing: boolean; text: string }
 export function DeckView({
   project,
   presentationId,
+  today,
   onRead,
   onTitle,
 }: {
@@ -35,16 +36,20 @@ export function DeckView({
   const [failure, setFailure] = useState<ReadFailure | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const seq = useRef(0)
+  const loadedAt = useRef<number | null>(null)
+  const loading = useRef(false)
 
   /** `quiet` : la présentation reste affichée pendant la relecture, un échec se dit par un message (`failureFeedback`). */
   const load = useCallback(
     async (quiet = false, silent = false) => {
       const mine = ++seq.current
+      loading.current = true
       if (quiet) setRefreshing(true)
       else setFailure(null)
       try {
         const read = await api.deck(presentationId)
         if (mine !== seq.current) return
+        loadedAt.current = Date.now()
         setDeck(read)
         setFailure(null)
         onRead()
@@ -58,7 +63,10 @@ export function DeckView({
         if (feedback.screen || missing) setFailure({ missing, text })
         else if (feedback.toast) toast(refreshFailure(text), 'danger')
       } finally {
-        if (mine === seq.current) setRefreshing(false)
+        if (mine === seq.current) {
+          loading.current = false
+          setRefreshing(false)
+        }
       }
     },
     [presentationId, onRead, onTitle, toast],
@@ -68,6 +76,21 @@ export function DeckView({
     void load()
     return () => {
       seq.current++
+    }
+  }, [load])
+
+  // Retour sur l'onglet (on revient d'une app ouverte depuis une diapositive) : relecture discrète si la lecture date.
+  useEffect(() => {
+    if (api.demo) return
+    const onReturn = () => {
+      const state = { visible: document.visibilityState === 'visible', busy: loading.current, loadedAt: loadedAt.current }
+      if (shouldRefresh(state, Date.now())) void load(true, true)
+    }
+    document.addEventListener('visibilitychange', onReturn)
+    window.addEventListener('focus', onReturn)
+    return () => {
+      document.removeEventListener('visibilitychange', onReturn)
+      window.removeEventListener('focus', onReturn)
     }
   }, [load])
 
@@ -122,9 +145,11 @@ export function DeckView({
         </div>
       </header>
 
-      <ol className="deck-titles panel">
-        {deck.slides.map((slide) => (
-          <li key={slide.id}>{shownTitle(slide)}</li>
+      <ol className="deck" aria-label="Diapositives">
+        {deck.slides.map((slide, index) => (
+          <li key={slide.id} className="deck__item">
+            <Slide slide={slide} index={index} count={deck.slides.length} project={deck.project} today={today} />
+          </li>
         ))}
       </ol>
     </div>

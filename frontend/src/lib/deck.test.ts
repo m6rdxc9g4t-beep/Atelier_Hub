@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { defaultTitle, presentationMeta, shownTitle } from './deck.ts'
+import { defaultTitle, longDay, moreText, presentationMeta, shownText, shownTitle } from './deck.ts'
 import type { DeckSlide, SlideLive } from './types.ts'
 
 const live = (more: Partial<SlideLive> = {}): SlideLive => ({
@@ -58,5 +58,26 @@ describe('présentations', () => {
     assert.equal(shownTitle(slide({ title: 'Où en est-on ?' })), 'Où en est-on ?')
     // Le titre automatique d'un élément suit son nom dans l'app.
     assert.equal(shownTitle(slide({ kind: 'viz', ref: 'a1', ref_label: 'Ancien nom', live: live({ auto_title: 'Tableau mensuel' }) })), 'Tableau mensuel')
+  })
+
+  it('affiche le texte rédigé, sinon la phrase automatique', () => {
+    assert.equal(shownText(slide()), '5 features terminées sur 8 (63 %).')
+    assert.equal(shownText(slide({ body: 'Le projet tient ses délais.', text_source: 'manual' })), 'Le projet tient ses délais.')
+    // Un texte rédigé vide reste vide : la phrase automatique ne revient que quand `body` est nul.
+    assert.equal(shownText(slide({ body: '', text_source: 'manual' })), '')
+    assert.equal(shownText(slide({ kind: 'text', live: live({ state: 'none', auto_title: 'Texte', auto_text: '' }) })), '')
+  })
+
+  it('écrit le jour de la lecture en toutes lettres', () => {
+    assert.equal(longDay('2026-11-12'), '12 novembre 2026')
+    assert.equal(longDay('2026-03-01'), '1er mars 2026')
+    assert.equal(longDay('2026-11-12T08:00:00Z'), '12 novembre 2026')
+    assert.equal(longDay('hier'), '')
+  })
+
+  it('compte ce qu’une liste ne montre pas', () => {
+    assert.equal(moreText(0), '')
+    assert.equal(moreText(1), 'et 1 autre')
+    assert.equal(moreText(4), 'et 4 autres')
   })
 })

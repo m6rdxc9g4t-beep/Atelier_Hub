@@ -74,20 +74,439 @@
   display: none;
 }
 
-/* Plan d'une présentation : ses titres, dans l'ordre. */
-.deck-titles {
+/* ── Présentation : ses diapositives, empilées dans l'ordre ──────────────── */
+.deck {
+  display: grid;
+  gap: 20px;
   margin: 0;
-  padding: 10px 14px 10px 38px;
-  line-height: 2;
+  padding: 0;
+  list-style: none;
+}
+.deck__item {
+  min-width: 0;
 }
 
-@media (max-width: 860px) {
+/* ── Diapositive ─────────────────────────────────────────────────────────────
+   Une boîte 16:9 qui est son propre conteneur : toutes les tailles internes sont en unités de conteneur (cqw / cqh)
+   ou en em de `.slide__inner`. Le même balisage tient dans la carte de lecture, le plein écran et la page imprimée,
+   sans calcul en JavaScript. Plate : un trait, pas d'ombre. */
+.slide {
+  aspect-ratio: 16 / 9;
+  container-type: size;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+.slide__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1em;
+  height: 100%;
+  padding: 5cqh 5cqw 3.6cqh;
+  font-size: 2.1cqw;
+  line-height: 1.4;
+}
+.slide__head {
+  display: flex;
+  /* En haut : l'icône reste sur la première ligne d'un titre qui passe à la ligne. */
+  align-items: flex-start;
+  gap: 0.7em;
+  flex: none;
+  min-width: 0;
+}
+.slide__title {
+  margin: 0;
+  min-width: 0;
+  font-size: 1.7em;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+/* Icône de l'app lue : la marque commune la dimensionne en rem, la diapositive la met à son échelle. */
+.slide__head .atelier-brand__tile {
+  width: 2em;
+  height: 2em;
+  border-radius: 0.5em;
+}
+.slide__head .atelier-brand__tile svg {
+  width: 1.15em;
+  height: 1.15em;
+}
+
+/* Débordement : le texte ne rétrécit pas, la liste prend la place restante et masque ce qui dépasse. */
+.slide__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1em;
+  min-height: 0;
+  overflow: hidden;
+}
+.slide-text {
+  flex: none;
+  max-width: 62em;
+  color: var(--app-text);
+}
+.slide-text p,
+.slide-text ul {
+  margin: 0;
+}
+.slide-text p {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.slide-text > :not(:first-child) {
+  margin-top: 0.6em;
+}
+.slide-text ul {
+  display: grid;
+  gap: 0.35em;
+  padding-left: 1.1em;
+}
+.slide-text li {
+  padding-left: 0.2em;
+  overflow-wrap: anywhere;
+}
+.slide-text li::marker {
+  color: var(--faint);
+}
+
+/* Cartes de chiffres : celles de la marque commune (tailles en rem), redéclarées à l'échelle de la diapositive. */
+.slide-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9em, 1fr));
+  gap: 0.8em;
+  flex: none;
+}
+.slide-kpis .atelier-kpi {
+  gap: 0.3em;
+  padding: 0.75em 0.85em 0.8em;
+  border-radius: var(--atelier-radius-xl);
+}
+.slide-kpis .atelier-kpi__label {
+  font-size: 0.66em;
+}
+/* La valeur tient sur une ligne dans une carte sur quatre (« 13 nov. 2026 »). */
+.slide-kpis .atelier-kpi__value {
+  font-size: 1.25em;
+  white-space: nowrap;
+}
+/* La note passe à la ligne plutôt que d'être coupée (deux lignes au plus). */
+.slide-kpis .atelier-kpi__note {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: 0.66em;
+  line-height: 1.35;
+}
+/* Une seule carte (les lignes d'une table) ne s'étire pas sur toute la largeur. */
+.slide-kpis .atelier-kpi:only-child {
+  max-width: 14em;
+}
+
+/* Lignes : statut (pastille et libellé), libellé, détail, date. Colonnes alignées d'une ligne à l'autre. */
+.slide-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.slide-rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  column-gap: 1.4em;
+  flex: 0 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-size: 0.86em;
+  list-style: none;
+}
+.slide-rows[data-status] {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+.slide-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+  padding: 0.5em 0;
+  border-top: 1px solid var(--app-line);
+}
+.slide-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.slide-row__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: 0.86em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.slide-row__status .status-dot {
+  width: 0.6em;
+  height: 0.6em;
+}
+.slide-row__label {
+  min-width: 0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slide-row__link {
+  text-decoration: none;
+}
+.slide-row__link:hover {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.slide-row__detail {
+  max-width: 30em;
+  color: var(--app-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slide-row__date {
+  color: var(--app-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.slide-rows__more {
+  flex: none;
+  margin: 0;
+  padding-top: 0.5em;
+  border-top: 1px solid var(--app-line);
+  font-size: 0.78em;
+  color: var(--app-muted);
+}
+
+/* États : rien de rattaché (neutre), élément disparu (avertissement), app arrêtée (« Service tombé » de la charte :
+   icône éteinte, message en rouge — hub.css ne le déclare que pour `.panel`). */
+.slide__message {
+  flex: none;
+  max-width: 62em;
+  margin: 0;
+  color: var(--app-muted);
+}
+.slide[data-state="missing"] .slide__message {
+  font-weight: 500;
+  color: var(--warning);
+}
+.slide[data-state="down"] .slide__message {
+  font-weight: 500;
+  color: var(--danger);
+}
+.slide[data-state="down"] .slide__head .atelier-brand__tile {
+  filter: grayscale(0.85);
+  opacity: 0.55;
+}
+.slide[data-state="down"] .slide__title {
+  color: var(--app-muted);
+}
+
+.slide__foot {
+  display: flex;
+  align-items: center;
+  gap: 1.2em;
+  flex: none;
+  min-width: 0;
+  font-size: 0.66em;
+  color: var(--app-muted);
+}
+.slide__open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  min-width: 0;
+  font-weight: 500;
+  color: var(--accent-ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.slide__open:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.slide__open svg {
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+}
+.slide__where {
+  display: flex;
+  align-items: center;
+  gap: 1.2em;
+  min-width: 0;
+  margin-left: auto;
+}
+.slide__project {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slide__page {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Diapositive de titre : le titre en grand, le texte en sous-titre. */
+.slide[data-kind="title"] .slide__inner {
+  justify-content: center;
+  gap: 1.4em;
+}
+.slide[data-kind="title"] .slide__body {
+  flex: 0 1 auto;
+}
+.slide[data-kind="title"] .slide__title {
+  font-size: 2.7em;
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+}
+.slide[data-kind="title"] .slide-text {
+  max-width: 34em;
+  font-size: 1.15em;
+  color: var(--app-muted);
+}
+.slide[data-kind="title"] .slide__foot {
+  position: absolute;
+  right: 5cqw;
+  bottom: 3.6cqh;
+  left: 5cqw;
+}
+.slide[data-kind="title"] {
+  position: relative;
+}
+
+/* ── Téléphone, à l'écran seulement (à l'impression, la largeur de la « fenêtre » est celle de la page) : en lecture,
+   les diapositives deviennent des cartes d'une colonne, aux tailles de texte de l'interface. ─────────────────── */
+@media screen and (max-width: 860px) {
   .back-link {
     min-height: 32px;
   }
+  .deck {
+    gap: 12px;
+  }
+  .deck .slide {
+    aspect-ratio: auto;
+    container-type: inline-size;
+  }
+  .deck .slide__inner {
+    gap: 12px;
+    height: auto;
+    padding: 16px 14px 12px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .deck .slide__title {
+    font-size: 17px;
+  }
+  .deck .slide[data-kind="title"] .slide__inner {
+    gap: 12px;
+    padding-top: 28px;
+  }
+  .deck .slide[data-kind="title"] .slide__title {
+    font-size: 24px;
+  }
+  .deck .slide[data-kind="title"] .slide-text {
+    font-size: 14px;
+  }
+  .deck .slide[data-kind="title"] .slide__foot {
+    position: static;
+  }
+  .deck .slide__head .atelier-brand__tile {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--atelier-radius-sm);
+  }
+  .deck .slide__head .atelier-brand__tile svg {
+    width: 14px;
+    height: 14px;
+  }
+  .deck .slide__body,
+  .deck .slide-list,
+  .deck .slide-rows {
+    overflow: visible;
+  }
+  .deck .slide-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .deck .slide-kpis .atelier-kpi {
+    padding: 10px 12px;
+  }
+  .deck .slide-kpis .atelier-kpi__label,
+  .deck .slide-kpis .atelier-kpi__note {
+    font-size: 12px;
+  }
+  .deck .slide-kpis .atelier-kpi__value {
+    font-size: 20px;
+  }
+  /* Une ligne par élément : statut et libellé, puis détail et date dessous. */
+  .deck .slide-rows,
+  .deck .slide-rows[data-status] {
+    display: block;
+    font-size: 14px;
+  }
+  .deck .slide-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding: 9px 0;
+  }
+  .deck .slide-row > :empty {
+    display: none;
+  }
+  .deck .slide-row__status {
+    order: 3;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--app-muted);
+  }
+  .deck .slide-row__label {
+    flex: 1 1 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .deck .slide-row__detail,
+  .deck .slide-row__date {
+    order: 4;
+    max-width: 100%;
+    font-size: 12px;
+  }
+  .deck .slide-rows__more {
+    font-size: 12.5px;
+  }
+  .deck .slide__foot {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding-top: 4px;
+    font-size: 12px;
+  }
 }
 @media (pointer: coarse) {
-  .back-link {
+  .back-link,
+  .slide__open {
+    min-height: 40px;
+  }
+  .deck .slide-row__link {
+    display: inline-flex;
+    align-items: center;
     min-height: 40px;
   }
 }

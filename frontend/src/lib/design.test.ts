@@ -16,6 +16,19 @@ describe('charte de la suite', () => {
     assert.match(read('../styles/index.css'), /@import '\.\/hub\.css';\s*@import '\.\/slides\.css';/)
   })
 
+  it('une diapositive est une boîte 16:9 à sa propre échelle, plate et sans transition', () => {
+    const css = withoutComments(read('../styles/slides.css'))
+    const slide = css.match(/(?:^|})\s*\.slide\s*{([^}]*)}/)
+    assert.ok(slide, '.slide est déclaré')
+    assert.match(slide[1]!, /aspect-ratio:\s*16 \/ 9;/)
+    // Conteneur : les tailles internes sont en cqw / cqh, le même balisage sert la lecture, le plein écran, l'impression.
+    assert.match(slide[1]!, /container-type:\s*size;/)
+    assert.doesNotMatch(css, /box-shadow|text-shadow|transition|animation/)
+    // La mise en page du téléphone ne vaut qu'à l'écran : à l'impression, la largeur de la « fenêtre » est celle de la page.
+    for (const m of css.matchAll(/@media\s+([^{]*)\(max-width/g)) assert.match(m[1]!, /\bscreen\b/, `@media ${m[1]}(max-width…)`)
+    assert.match(css, /@media screen and \(max-width: 860px\)/)
+  })
+
   it('les actions d’une fenêtre passent à la ligne au lieu de sortir de la fenêtre', () => {
     const css = withoutComments(read('../styles/hub.css'))
     for (const selector of ['.dialog__actions', '.dialog__group']) {

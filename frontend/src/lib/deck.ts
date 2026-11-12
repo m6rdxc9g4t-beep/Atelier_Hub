@@ -24,7 +24,24 @@ export function presentationMeta(presentation: Pick<PresentationSummary, 'slides
   return `${slides} · modifiée ${/^\d/.test(when) ? `le ${when}` : when}`
 }
 
+/** « 12 novembre 2026 », « 1er mars 2026 » (vide si le jour est illisible). */
+export function longDay(day: string): string {
+  const [year, month, date] = day.slice(0, 10).split('-').map(Number)
+  const name = MONTHS[(month ?? 0) - 1]
+  return name && year && date ? `${date === 1 ? '1er' : date} ${name} ${year}` : ''
+}
+
+/** « et 4 autres », « et 1 autre » : ce qu'une liste ne montre pas (vide s'il ne manque rien). */
+export function moreText(more: number): string {
+  return more > 0 ? `et ${plural(more, 'autre', 'autres')}` : ''
+}
+
 /** Titre affiché : celui que tu as écrit, sinon le titre automatique (relu dans les apps). */
 export function shownTitle(slide: Pick<DeckSlide, 'title' | 'live'>): string {
   return slide.title ?? slide.live.auto_title
+}
+
+/** Texte affiché : celui qui a été rédigé, sinon la phrase automatique (calculée sur les chiffres du jour). */
+export function shownText(slide: Pick<DeckSlide, 'body' | 'live'>): string {
+  return slide.body ?? slide.live.auto_text
 }
