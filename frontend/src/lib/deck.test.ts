@@ -20,6 +20,7 @@ import {
   LONG_TITLE,
   shownTitle,
   SLIDE_TITLE_MAX,
+  staleNotice,
   syncedDraft,
   unsavedFields,
   unsavedNotice,
@@ -269,6 +270,13 @@ describe('présentations', () => {
     // Une autre année s'écrit ; un modèle ou une date absents ne laissent pas de trou dans la phrase.
     assert.equal(provenance(slide({ body: 'Mon texte.', text_source: 'manual', text_at: '2025-12-03T12:00:00.000Z' }), today), 'Ton texte, modifié le 3 déc. 2025')
     assert.equal(provenance(slide({ body: 'Texte.', text_source: 'claude', text_model: null, text_at: null }), today), 'Rédigé par Claude')
+  })
+
+  it('dit quels nombres d’un texte d’IA sont à relire', () => {
+    assert.equal(staleNotice([]), '')
+    assert.equal(staleNotice(['63 %']), 'Texte à relire : 63 % ne correspond plus aux chiffres du jour')
+    assert.equal(staleNotice(['33 %', '2']), 'Texte à relire : 33 % et 2 ne correspondent plus aux chiffres du jour')
+    assert.equal(staleNotice(['33 %', '2', '12 h']), 'Texte à relire : 33 %, 2 et 12 h ne correspondent plus aux chiffres du jour')
   })
 
   it('propose toutes les sortes du Hub, sous les mêmes noms, « Texte libre » en tête', () => {

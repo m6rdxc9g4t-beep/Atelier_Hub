@@ -2,6 +2,7 @@
 // la partie vivante d'une diapositive (`live`) arrive résolue du backend.
 
 import type { SlidePatch } from './api.ts'
+import { engineLabel } from './engine.ts'
 import { plural, relativeDay, shortDate } from './format.ts'
 import type { Deck, DeckSlide, Overview, PresentationSummary, SlideKind, SlideRecord } from './types.ts'
 
@@ -172,8 +173,6 @@ export function unsavedNotice(failed: Partial<Record<SlideField, string>>, unsav
   return fields.map((field) => `${FIELD_NAMES[field]} n’a pas été enregistré : ${reason(field)}`).join(' ')
 }
 
-const ENGINE_NAMES = { ollama: 'Ollama', claude: 'Claude' } as const
-
 /**
  * D'où vient le texte d'une diapositive, et de quand : un texte rédigé est un contenu du Hub, daté, jamais mis à jour
  * tout seul ; la phrase automatique, elle, est recalculée à chaque lecture.
@@ -183,9 +182,18 @@ export function provenance(slide: Pick<DeckSlide, 'kind' | 'body' | 'text_source
   const day = shortDate(slide.text_at, today)
   const when = day ? ` le ${day}` : ''
   if (slide.text_source === 'manual') return `Ton texte, modifié${when}`
-  // Les modèles de Claude sont des alias (« sonnet ») : avec leur majuscule. Ceux d'Ollama gardent leur nom exact.
-  const model = slide.text_model && slide.text_source === 'claude' ? slide.text_model.charAt(0).toUpperCase() + slide.text_model.slice(1) : slide.text_model
-  return `Rédigé par ${ENGINE_NAMES[slide.text_source]}${model ? ` (${model})` : ''}${when}`
+  return `Rédigé par ${engineLabel(slide.text_source, slide.text_model)}${when}`
+}
+
+/**
+ * « Texte à relire : 63 % ne correspond plus aux chiffres du jour » — les nombres d'un texte rédigé par une IA que le
+ * Hub ne retrouve plus dans ce que la diapositive affiche aujourd'hui (`stale`). Vide s'il n'y en a pas. Une aide, pas
+ * une garantie : un nombre resté juste mais mal attribué n'est pas vu.
+ */
+export function staleNotice(stale: readonly string[]): string {
+  if (stale.length === 0) return ''
+  const listed = stale.length === 1 ? stale[0]! : `${stale.slice(0, -1).join(', ')} et ${stale.at(-1)}`
+  return `Texte à relire : ${listed} ne ${stale.length === 1 ? 'correspond' : 'correspondent'} plus aux chiffres du jour`
 }
 
 /** Panneau de la fiche dont une diapositive peut viser un élément. */

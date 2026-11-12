@@ -1,7 +1,7 @@
 // Accès à l'API du Hub. En mode « demo » (aperçu sans la suite), les lectures viennent de src/demo/snapshot.json
 // et les écritures sont refusées avec un message clair.
 
-import type { AppId, Catalog, Deck, ExampleCatalog, HubLink, HubProject, LinkApp, Overview, PresentationSummary, SlideKind, SlideRecord } from './types.ts'
+import type { AiStatus, AppId, Catalog, ClaudeModel, Deck, EngineChoice, ExampleCatalog, HubLink, HubProject, LinkApp, Overview, PresentationSummary, SlideKind, SlideRecord, WriteResult } from './types.ts'
 
 export interface ProjectInput {
   name?: string
@@ -44,6 +44,20 @@ export interface SlidePatch {
   body?: string | null
 }
 
+/** Demande de rédaction (`POST /api/presentations/:pid/write`) : une requête = un appel au moteur, plus une relance. */
+export interface WriteInput {
+  /** 1 à 12 diapositives de la présentation. */
+  slide_ids: number[]
+  engine?: EngineChoice
+  /** Modèle d'Ollama (défaut : celui du Hub). */
+  model?: string
+  claude_model?: ClaudeModel
+  /** Public visé, ton : 500 caractères au plus. */
+  instructions?: string
+  /** « Réécrire aussi mes textes » : sans cela, un texte écrit à la main n'est jamais remplacé. */
+  overwrite_manual?: boolean
+}
+
 export interface HubApi {
   demo: boolean
   listProjects(): Promise<HubProject[]>
@@ -70,6 +84,12 @@ export interface HubApi {
   updateSlide(presentationId: number, slideId: number, patch: SlidePatch): Promise<SlideRecord>
   removeSlide(presentationId: number, slideId: number): Promise<void>
   reorderSlides(presentationId: number, slideIds: number[]): Promise<SlideRecord[]>
+  /** État des moteurs d'IA et mode en ligne. `refresh` : revérifier Claude sans attendre la fin de son cache. */
+  aiStatus(refresh?: boolean, signal?: AbortSignal): Promise<AiStatus>
+  /** Seul moyen de passer « En ligne » (hors ligne par défaut ; hors ligne, rien ne part vers Claude). */
+  setOnline(online: boolean): Promise<{ online: boolean }>
+  /** Une IA rédige le texte de ces diapositives. Abandonner la requête (`signal`) interrompt l'appel au moteur. */
+  write(presentationId: number, input: WriteInput, signal?: AbortSignal): Promise<WriteResult>
 }
 
 export class ApiError extends Error {
@@ -122,4 +142,7 @@ export const httpApi: HubApi = {
   updateSlide: (presentationId, slideId, patch) => request('PATCH', `/api/presentations/${presentationId}/slides/${slideId}`, patch),
   removeSlide: (presentationId, slideId) => request('DELETE', `/api/presentations/${presentationId}/slides/${slideId}`),
   reorderSlides: (presentationId, slideIds) => request('PUT', `/api/presentations/${presentationId}/order`, { slide_ids: slideIds }),
+  aiStatus: (refresh, signal) => request('GET', `/api/ai/status${refresh ? '?refresh=true' : ''}`, undefined, signal),
+  setOnline: (online) => request('PUT', '/api/settings/online-mode', { online }),
+  write: (presentationId, input, signal) => request('POST', `/api/presentations/${presentationId}/write`, input, signal),
 }
