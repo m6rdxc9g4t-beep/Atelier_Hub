@@ -8,7 +8,7 @@ import { resolve } from 'node:path'
 import { buildApp } from '../src/app.js'
 import { loadConfig } from '../src/config.js'
 import { openDatabase } from '../src/db/database.js'
-import type { AppId, HubProject } from '../src/domain/types.js'
+import type { AppId, Deck, HubProject, PresentationSummary } from '../src/domain/types.js'
 import { fakeAppsConfig, fakeSuite } from '../test/fixtures/suite.js'
 
 const suite = fakeSuite()
@@ -33,6 +33,8 @@ for (const link of [
   { app: 'source', kind: 'database', ref: 'SAP BW · cube 0COPA_C01', label: 'Entrepôt BW — rentabilité', note: 'Extraction mensuelle' },
   { app: 'source', kind: 'folder', ref: '~/Documents/CGO/Extractions', label: 'Extractions brutes' },
   { app: 'nexus', kind: 'agent', ref: 'data_analyst', label: 'Data Analyst / Power BI' },
+  // Un rapport épinglé : la présentation d'exemple lui donne sa diapositive.
+  { app: 'viz', kind: 'report', ref: 'a1b2c3d4e5f6', label: 'KPI CGO — Tableau mensuel' },
 ] as const) {
   await call('POST', `/api/projects/${kpi.id}/links`, link)
 }
@@ -43,7 +45,7 @@ const cloture = await call<HubProject>('POST', '/api/projects', {
 })
 
 // Fiche d'une histoire des « Exemples de la suite » : celle que le double a chargée dans toutes les apps.
-await call<HubProject>('POST', '/api/exemples-suite/studio-garance')
+const garance = await call<HubProject>('POST', '/api/exemples-suite/studio-garance')
 const examples = await call('GET', '/api/exemples-suite')
 
 const projects = await call<HubProject[]>('GET', '/api/projects')
@@ -54,8 +56,17 @@ const catalogs = Object.fromEntries(
   await Promise.all((['projets', 'wiki', 'viz', 'tab', 'convert', 'nexus'] as AppId[]).map(async (a) => [a, await call('GET', `/api/catalog/${a}`)] as const)),
 )
 
+// Présentations d'exemple : le plan que le Hub bâtit sur la fiche (« Générer » sans IA), et leur lecture résolue.
+const presentations: Record<string, PresentationSummary[]> = {}
+const decks: Record<string, Deck> = {}
+for (const project of [kpi, garance]) {
+  await call<PresentationSummary>('POST', `/api/projects/${project.id}/presentations`, { plan: true })
+  presentations[project.id] = await call<PresentationSummary[]>('GET', `/api/projects/${project.id}/presentations`)
+  for (const p of presentations[project.id]!) decks[p.id] = await call<Deck>('GET', `/api/presentations/${p.id}`)
+}
+
 const out = resolve(import.meta.dirname, '..', '..', 'frontend', 'src', 'demo')
 mkdirSync(out, { recursive: true })
-writeFileSync(resolve(out, 'snapshot.json'), `${JSON.stringify({ projects, overviews, catalogs, examples, first: kpi.id, other: cloture.id }, null, 1)}\n`)
+writeFileSync(resolve(out, 'snapshot.json'), `${JSON.stringify({ projects, overviews, catalogs, examples, presentations, decks, first: kpi.id, other: cloture.id }, null, 1)}\n`)
 await app.close()
 console.log(`Aperçu écrit : ${resolve(out, 'snapshot.json')}`)

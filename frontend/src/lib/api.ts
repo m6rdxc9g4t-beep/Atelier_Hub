@@ -1,7 +1,7 @@
 // Accès à l'API du Hub. En mode « demo » (aperçu sans la suite), les lectures viennent de src/demo/snapshot.json
 // et les écritures sont refusées avec un message clair.
 
-import type { AppId, Catalog, ExampleCatalog, HubLink, HubProject, LinkApp, Overview } from './types.ts'
+import type { AppId, Catalog, Deck, ExampleCatalog, HubLink, HubProject, LinkApp, Overview, PresentationSummary, SlideKind, SlideRecord } from './types.ts'
 
 export interface ProjectInput {
   name?: string
@@ -22,6 +22,28 @@ export interface LinkInput {
   note?: string
 }
 
+export interface PresentationInput {
+  /** Absent ou vide : « <fiche> — <mois année> ». */
+  title?: string
+  /** Bâtir le plan sur la fiche (défaut) ; false : la seule diapositive de titre. */
+  plan?: boolean
+}
+
+export interface SlideInput {
+  kind: SlideKind
+  /** Élément visé dans son app, et son libellé au moment du choix ; absents : toute la liste. */
+  ref?: string
+  ref_label?: string
+  /** Diapositive après laquelle insérer (null : en tête ; absent : à la fin). */
+  after?: number | null
+}
+
+/** Titre vide ou null : titre automatique. Texte vide ou null : phrase automatique. */
+export interface SlidePatch {
+  title?: string | null
+  body?: string | null
+}
+
 export interface HubApi {
   demo: boolean
   listProjects(): Promise<HubProject[]>
@@ -36,6 +58,18 @@ export interface HubApi {
   examples(signal?: AbortSignal): Promise<ExampleCatalog>
   /** Crée la fiche de l'histoire, ou la remet sur ce que les apps ont chargé depuis. */
   openExampleProject(storyId: string): Promise<HubProject>
+  listPresentations(projectId: number, signal?: AbortSignal): Promise<PresentationSummary[]>
+  /** « Générer » sans IA : le Hub lit la fiche et bâtit le plan. */
+  createPresentation(projectId: number, input: PresentationInput): Promise<PresentationSummary>
+  /** Présentation résolue : les apps sont relues à chaque appel. */
+  deck(presentationId: number, signal?: AbortSignal): Promise<Deck>
+  renamePresentation(presentationId: number, title: string): Promise<PresentationSummary>
+  deletePresentation(presentationId: number): Promise<void>
+  /** Les écritures d'une diapositive rendent son enregistrement, pas la présentation résolue : la suite n'est pas relue. */
+  addSlide(presentationId: number, input: SlideInput): Promise<SlideRecord>
+  updateSlide(presentationId: number, slideId: number, patch: SlidePatch): Promise<SlideRecord>
+  removeSlide(presentationId: number, slideId: number): Promise<void>
+  reorderSlides(presentationId: number, slideIds: number[]): Promise<SlideRecord[]>
 }
 
 export class ApiError extends Error {
@@ -79,4 +113,13 @@ export const httpApi: HubApi = {
   catalog: (app, q, signal) => request('GET', `/api/catalog/${app}?q=${encodeURIComponent(q)}`, undefined, signal),
   examples: (signal) => request('GET', '/api/exemples-suite', undefined, signal),
   openExampleProject: (storyId) => request('POST', `/api/exemples-suite/${encodeURIComponent(storyId)}`),
+  listPresentations: (projectId, signal) => request('GET', `/api/projects/${projectId}/presentations`, undefined, signal),
+  createPresentation: (projectId, input) => request('POST', `/api/projects/${projectId}/presentations`, input),
+  deck: (presentationId, signal) => request('GET', `/api/presentations/${presentationId}`, undefined, signal),
+  renamePresentation: (presentationId, title) => request('PATCH', `/api/presentations/${presentationId}`, { title }),
+  deletePresentation: (presentationId) => request('DELETE', `/api/presentations/${presentationId}`),
+  addSlide: (presentationId, input) => request('POST', `/api/presentations/${presentationId}/slides`, input),
+  updateSlide: (presentationId, slideId, patch) => request('PATCH', `/api/presentations/${presentationId}/slides/${slideId}`, patch),
+  removeSlide: (presentationId, slideId) => request('DELETE', `/api/presentations/${presentationId}/slides/${slideId}`),
+  reorderSlides: (presentationId, slideIds) => request('PUT', `/api/presentations/${presentationId}/order`, { slide_ids: slideIds }),
 }

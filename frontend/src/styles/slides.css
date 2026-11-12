@@ -1,0 +1,878 @@
+/* ==========================================================================
+   Atelier Hub — présentations d'une fiche (liste, lecture d'une présentation, diapositives).
+   Même charte que hub.css : uniquement des jetons (--app-*, --accent*, --atelier-*, --status-*, --ds-*, et ceux
+   déclarés en tête de hub.css), aucune couleur littérale (vérifié par src/lib/design.test.ts). Plat, sans ombre,
+   aucune transition.
+   ========================================================================== */
+
+/* ── Écrans des présentations ────────────────────────────────────────────── */
+.presentations {
+  max-width: 880px;
+}
+.deck-page {
+  max-width: 1080px;
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--app-muted);
+  text-decoration: none;
+}
+.back-link:hover {
+  color: var(--accent-ink);
+}
+.back-link svg {
+  width: 14px;
+  height: 14px;
+}
+.read-only-note {
+  font-size: 12px;
+  color: var(--app-muted);
+}
+.presentations__loading {
+  padding: 16px 14px 4px;
+}
+.presentations__empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 40px 20px;
+  text-align: center;
+}
+.presentations__empty-title {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.presentations__empty-text {
+  max-width: 46ch;
+  margin: 0 0 10px;
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+/* Deux actions par ligne (renommer, supprimer) : seule la dernière garde la marge du bord. */
+.presentations .row__action:not(:last-child) {
+  margin-right: 0;
+}
+
+/* Message d'une fenêtre (échec d'une création, d'un renommage) : au-dessus de ses boutons, jamais une notification,
+   qui passerait sous la fenêtre. */
+.dialog-message {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+.dialog-message:empty {
+  display: none;
+}
+
+/* ── Présentation : ses diapositives, empilées dans l'ordre ──────────────── */
+.deck {
+  display: grid;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.deck__item {
+  min-width: 0;
+}
+
+/* ── Diapositive ─────────────────────────────────────────────────────────────
+   Une boîte 16:9 qui est son propre conteneur : toutes les tailles internes sont en unités de conteneur (cqw / cqh)
+   ou en em de `.slide__inner`. Le même balisage tient dans la carte de lecture, le plein écran et la page imprimée,
+   sans calcul en JavaScript. Plate : un trait, pas d'ombre. */
+.slide {
+  aspect-ratio: 16 / 9;
+  container-type: size;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+.slide__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1em;
+  height: 100%;
+  padding: 5cqh 5cqw 3.6cqh;
+  font-size: 2.1cqw;
+  line-height: 1.4;
+}
+.slide__head {
+  display: flex;
+  /* En haut : l'icône reste sur la première ligne d'un titre qui passe à la ligne. */
+  align-items: flex-start;
+  gap: 0.7em;
+  flex: none;
+  min-width: 0;
+}
+.slide__title {
+  margin: 0;
+  min-width: 0;
+  font-size: 1.7em;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+/* Icône de l'app lue : la marque commune la dimensionne en rem, la diapositive la met à son échelle. */
+.slide__head .atelier-brand__tile {
+  width: 2em;
+  height: 2em;
+  border-radius: 0.5em;
+}
+.slide__head .atelier-brand__tile svg {
+  width: 1.15em;
+  height: 1.15em;
+}
+
+/* Débordement : le texte ne rétrécit pas, la liste prend la place restante et masque ce qui dépasse. */
+.slide__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1em;
+  min-height: 0;
+  overflow: hidden;
+}
+.slide-text {
+  flex: none;
+  max-width: 62em;
+  color: var(--app-text);
+}
+.slide-text p,
+.slide-text ul {
+  margin: 0;
+}
+.slide-text p {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.slide-text > :not(:first-child) {
+  margin-top: 0.6em;
+}
+.slide-text ul {
+  display: grid;
+  gap: 0.35em;
+  padding-left: 1.1em;
+}
+.slide-text li {
+  padding-left: 0.2em;
+  overflow-wrap: anywhere;
+}
+.slide-text li::marker {
+  color: var(--faint);
+}
+
+/* Cartes de chiffres : celles de la marque commune (tailles en rem), redéclarées à l'échelle de la diapositive. */
+.slide-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9em, 1fr));
+  gap: 0.8em;
+  flex: none;
+}
+.slide-kpis .atelier-kpi {
+  gap: 0.3em;
+  padding: 0.75em 0.85em 0.8em;
+  border-radius: var(--atelier-radius-xl);
+}
+.slide-kpis .atelier-kpi__label {
+  font-size: 0.66em;
+}
+/* La valeur tient sur une ligne dans une carte sur quatre (« 13 nov. 2026 »). */
+.slide-kpis .atelier-kpi__value {
+  font-size: 1.25em;
+  white-space: nowrap;
+}
+/* La note passe à la ligne plutôt que d'être coupée (deux lignes au plus). */
+.slide-kpis .atelier-kpi__note {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: 0.66em;
+  line-height: 1.35;
+}
+/* Une seule carte (les lignes d'une table) ne s'étire pas sur toute la largeur. */
+.slide-kpis .atelier-kpi:only-child {
+  max-width: 14em;
+}
+
+/* Lignes : statut (pastille et libellé), libellé, détail, date. Colonnes alignées d'une ligne à l'autre. */
+.slide-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.slide-rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  column-gap: 1.4em;
+  flex: 0 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-size: 0.86em;
+  list-style: none;
+}
+.slide-rows[data-status] {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+.slide-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+  padding: 0.5em 0;
+  border-top: 1px solid var(--app-line);
+}
+.slide-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.slide-row__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: 0.86em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.slide-row__status .status-dot {
+  width: 0.6em;
+  height: 0.6em;
+}
+.slide-row__label {
+  min-width: 0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slide-row__link {
+  text-decoration: none;
+}
+.slide-row__link:hover {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.slide-row__detail {
+  max-width: 30em;
+  color: var(--app-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slide-row__date {
+  color: var(--app-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.slide-rows__more {
+  flex: none;
+  margin: 0;
+  padding-top: 0.5em;
+  border-top: 1px solid var(--app-line);
+  font-size: 0.78em;
+  color: var(--app-muted);
+}
+
+/* États : rien de rattaché (neutre), élément disparu (avertissement), app arrêtée (« Service tombé » de la charte :
+   icône éteinte, message en rouge — hub.css ne le déclare que pour `.panel`). */
+.slide__message {
+  flex: none;
+  max-width: 62em;
+  margin: 0;
+  color: var(--app-muted);
+}
+.slide[data-state="missing"] .slide__message {
+  font-weight: 500;
+  color: var(--warning);
+}
+.slide[data-state="down"] .slide__message {
+  font-weight: 500;
+  color: var(--danger);
+}
+.slide[data-state="down"] .slide__head .atelier-brand__tile {
+  filter: grayscale(0.85);
+  opacity: 0.55;
+}
+.slide[data-state="down"] .slide__title {
+  color: var(--app-muted);
+}
+
+.slide__foot {
+  display: flex;
+  align-items: center;
+  gap: 1.2em;
+  flex: none;
+  min-width: 0;
+  font-size: 0.66em;
+  color: var(--app-muted);
+}
+/* « Chiffres lus le … » (diapositive de titre) reste sur une ligne : c'est le nom de la fiche, à droite, qui s'abrège. */
+.slide__foot > span:not(.slide__where) {
+  flex: none;
+  white-space: nowrap;
+}
+.slide__open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  min-width: 0;
+  font-weight: 500;
+  color: var(--accent-ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.slide__open:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.slide__open svg {
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+}
+.slide__where {
+  display: flex;
+  align-items: center;
+  gap: 1.2em;
+  min-width: 0;
+  margin-left: auto;
+}
+.slide__project {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slide__page {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Diapositive de titre : le titre en grand, le texte en sous-titre, centrés. Le pied est posé en bas, hors du flux
+   (il ne décentre pas le bloc) : sa hauteur est réservée en haut comme en bas, pour qu'un long texte s'arrête
+   au-dessus de lui au lieu de passer dessous. */
+.slide[data-kind="title"] .slide__inner {
+  justify-content: center;
+  gap: 1.4em;
+  padding-block: calc(3.6cqh + 2em);
+}
+.slide[data-kind="title"] .slide__body {
+  flex: 0 1 auto;
+}
+.slide[data-kind="title"] .slide__title {
+  font-size: 2.7em;
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+}
+/* Un long titre (jusqu'à 120 caractères) prendrait toute la diapositive : il laisse sa place au sous-titre. */
+.slide[data-kind="title"][data-long-title] .slide__title {
+  font-size: 2em;
+  line-height: 1.12;
+}
+.slide[data-kind="title"] .slide-text {
+  max-width: 34em;
+  font-size: 1.15em;
+  color: var(--app-muted);
+}
+.slide[data-kind="title"] .slide__foot {
+  position: absolute;
+  right: 5cqw;
+  bottom: 3.6cqh;
+  left: 5cqw;
+}
+.slide[data-kind="title"] {
+  position: relative;
+}
+
+/* ── Téléphone, à l'écran seulement (à l'impression, la largeur de la « fenêtre » est celle de la page) : en lecture,
+   les diapositives deviennent des cartes d'une colonne, aux tailles de texte de l'interface. ─────────────────── */
+@media screen and (max-width: 860px) {
+  .back-link {
+    min-height: 32px;
+  }
+  .deck {
+    gap: 12px;
+  }
+  .deck .slide {
+    aspect-ratio: auto;
+    container-type: inline-size;
+  }
+  .deck .slide__inner {
+    gap: 12px;
+    height: auto;
+    padding: 16px 14px 12px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .deck .slide__title {
+    font-size: 17px;
+  }
+  .deck .slide[data-kind="title"] .slide__inner {
+    gap: 12px;
+    padding-block: 28px 12px;
+  }
+  .deck .slide[data-kind="title"] .slide__title {
+    font-size: 24px;
+  }
+  .deck .slide[data-kind="title"] .slide-text {
+    font-size: 14px;
+  }
+  .deck .slide[data-kind="title"] .slide__foot {
+    position: static;
+  }
+  .deck .slide__head .atelier-brand__tile {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--atelier-radius-sm);
+  }
+  .deck .slide__head .atelier-brand__tile svg {
+    width: 14px;
+    height: 14px;
+  }
+  .deck .slide__body,
+  .deck .slide-list,
+  .deck .slide-rows {
+    overflow: visible;
+  }
+  .deck .slide-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .deck .slide-kpis .atelier-kpi {
+    padding: 10px 12px;
+  }
+  .deck .slide-kpis .atelier-kpi__label,
+  .deck .slide-kpis .atelier-kpi__note {
+    font-size: 12px;
+  }
+  .deck .slide-kpis .atelier-kpi__value {
+    font-size: 20px;
+  }
+  /* Une ligne par élément : statut et libellé, puis détail et date dessous. */
+  .deck .slide-rows,
+  .deck .slide-rows[data-status] {
+    display: block;
+    font-size: 14px;
+  }
+  .deck .slide-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding: 9px 0;
+  }
+  .deck .slide-row > :empty {
+    display: none;
+  }
+  .deck .slide-row__status {
+    order: 3;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--app-muted);
+  }
+  .deck .slide-row__label {
+    flex: 1 1 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .deck .slide-row__detail,
+  .deck .slide-row__date {
+    order: 4;
+    max-width: 100%;
+    font-size: 12px;
+  }
+  .deck .slide-rows__more {
+    font-size: 12.5px;
+  }
+  .deck .slide__foot {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding-top: 4px;
+    font-size: 12px;
+  }
+}
+@media (pointer: coarse) {
+  .back-link,
+  .slide__open {
+    min-height: 40px;
+  }
+  .deck .slide-row__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+}
+
+/* ── Mode « Modifier » : sous chaque diapositive, son éditeur ────────────────
+   Un panneau plat, de la largeur de la diapositive : titre à gauche, texte à droite, puis la ligne des messages et
+   des actions (retour à l'automatique, monter, descendre, supprimer). */
+.deck[data-editing] {
+  gap: 28px;
+}
+.deck[data-editing] .deck__item {
+  display: grid;
+  gap: 8px;
+}
+.slide-editor {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--app-surface);
+}
+.slide-editor__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 12px 16px;
+  align-items: start;
+}
+.slide-editor__field {
+  min-width: 0;
+}
+.slide-editor__count {
+  font-variant-numeric: tabular-nums;
+}
+.slide-editor textarea.field {
+  display: block;
+  min-height: 92px;
+}
+.slide-editor__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.slide-editor__messages {
+  display: flex;
+  flex: 1 1 240px;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.slide-editor__messages p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.slide-editor__messages p:empty {
+  display: none;
+}
+.slide-editor__status {
+  color: var(--app-muted);
+}
+.slide-editor__error {
+  flex: 1 1 100%;
+  font-weight: 500;
+  color: var(--danger);
+}
+.slide-editor__overflow {
+  font-weight: 500;
+  color: var(--warning);
+}
+.slide-editor__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  margin-left: auto;
+}
+.slide-editor__actions .btn:not(.btn--icon) {
+  margin-right: 6px;
+}
+.deck__add {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+.deck__empty {
+  margin: 0;
+  padding: 40px 20px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--app-surface);
+  color: var(--app-muted);
+  text-align: center;
+}
+/* En-tête d'une présentation : ses actions passent à la ligne plutôt que de sortir de l'écran. */
+.deck__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+@media screen and (max-width: 860px) {
+  .deck[data-editing] {
+    gap: 20px;
+  }
+  .slide-editor__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .deck__actions {
+    justify-content: flex-start;
+  }
+}
+/* Au doigt : champs à 16 px (en dessous, Safari zoome sur le champ qui reçoit le focus). */
+@media (pointer: coarse) {
+  .slide-editor .field,
+  .slide-add .field {
+    font-size: 16px;
+  }
+}
+
+/* ── Plein écran « Présenter » ────────────────────────────────────────────────
+   Une fenêtre modale qui couvre toute la page (couche supérieure : au-dessus de la page passée en plein écran, ou de
+   la page telle quelle quand le navigateur ne l'accorde pas). La scène est un conteneur : la diapositive y tient en
+   16:9 quelle que soit la forme de l'écran, la barre du bas reste toujours visible. */
+dialog.presenter {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+dialog.presenter[open] {
+  display: flex;
+  flex-direction: column;
+}
+dialog.presenter::backdrop {
+  background: var(--app-bg);
+}
+.presenter__stage {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 0;
+  container-type: size;
+}
+/* La scène reçoit le focus par le code (les touches y arrivent) : ce n'est pas une commande, pas d'anneau. */
+.presenter__stage:focus,
+.presenter__stage:focus-visible {
+  outline: none;
+}
+.presenter .slide {
+  width: min(100cqw, 100cqh * 16 / 9);
+  border-radius: 0;
+}
+.presenter__empty {
+  margin: 0;
+  color: var(--app-muted);
+}
+.presenter__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  min-height: 44px;
+  padding: 4px 8px 4px 16px;
+  padding-bottom: max(4px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--app-line);
+}
+.presenter__note {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--app-muted);
+  overflow-wrap: anywhere;
+}
+.presenter__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+/* Touchers répétés pour avancer : pas d'éclair de surlignage du navigateur, le fond pressé du bouton suffit. */
+.presenter__nav .btn {
+  -webkit-tap-highlight-color: transparent;
+}
+.presenter__count {
+  min-width: 6ch;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--app-muted);
+  text-align: center;
+}
+@media (pointer: coarse) {
+  .presenter__nav .btn--icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Téléphone tenu debout : une boîte 16:9 y serait illisible. La diapositive prend l'écran, à une taille de texte
+   lisible, et défile si elle est longue. Couché, elle reste en 16:9. */
+@media screen and (max-width: 860px) and (orientation: portrait) {
+  .presenter__stage {
+    display: block;
+    overflow-y: auto;
+  }
+  .presenter .slide {
+    width: 100%;
+    min-height: 100cqh;
+    aspect-ratio: auto;
+    container-type: inline-size;
+    border: 0;
+  }
+  .presenter .slide__inner {
+    gap: 1em;
+    height: auto;
+    min-height: 100cqh;
+    padding: 7cqw 5cqw 4cqw;
+    font-size: clamp(14px, 4cqw, 22px);
+  }
+  .presenter .slide__title {
+    font-size: 1.35em;
+  }
+  .presenter .slide[data-kind="title"] .slide__title {
+    font-size: 1.9em;
+  }
+  .presenter .slide[data-kind="title"] .slide-text {
+    font-size: 1em;
+  }
+  .presenter .slide[data-kind="title"] .slide__inner {
+    padding-block: 7cqw 4cqw;
+  }
+  .presenter .slide[data-kind="title"] .slide__foot {
+    position: static;
+  }
+  .presenter .slide__body,
+  .presenter .slide-list,
+  .presenter .slide-rows {
+    overflow: visible;
+  }
+  .presenter .slide__body {
+    flex: 1 0 auto;
+  }
+  .presenter .slide-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Une ligne par élément : libellé, puis statut, détail et date dessous. */
+  .presenter .slide-rows,
+  .presenter .slide-rows[data-status] {
+    display: block;
+    font-size: 1em;
+  }
+  .presenter .slide-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.1em 0.7em;
+  }
+  .presenter .slide-row > :empty {
+    display: none;
+  }
+  .presenter .slide-row__status {
+    order: 3;
+    font-weight: 400;
+    color: var(--app-muted);
+  }
+  .presenter .slide-row__label {
+    flex: 1 1 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .presenter .slide-row__detail,
+  .presenter .slide-row__date {
+    order: 4;
+    max-width: 100%;
+    font-size: 0.86em;
+  }
+  .presenter .slide__foot {
+    flex-wrap: wrap;
+    gap: 0.3em 1em;
+    font-size: 0.8em;
+  }
+}
+
+/* ── Impression (« Exporter en PDF ») ─────────────────────────────────────────
+   Une diapositive par page. La diapositive garde sa boîte d'écran (largeur de la page, 16:9) : aucune unité de
+   fenêtre, que Safari résout mal à l'impression. Page 16:9 plus 1 mm de marge basse : 297 × 9/16 = 167,06 mm, une
+   page de 167 mm déborderait sur une page blanche. La page est nommée : seule une présentation la prend, la fiche
+   s'imprime comme avant. Si le navigateur ignore la taille de page, on obtient une diapositive par page du format
+   choisi dans la fenêtre d'impression, jamais coupée. Le thème clair est posé par lib/print.ts. */
+@page deck {
+  size: 297mm 168mm;
+  margin: 0;
+}
+@media print {
+  :root:has(.deck-page),
+  :root:has(.deck-page) body {
+    background: var(--app-surface);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  :root:has(.deck-page) body,
+  .shell:has(.deck-page) {
+    min-height: 0;
+  }
+  .shell:has(.deck-page) .sidebar,
+  .shell:has(.deck-page) .sidebar-backdrop,
+  .shell:has(.deck-page) .topbar,
+  :root:has(.deck-page) .toasts,
+  :root:has(.deck-page) dialog,
+  .deck__head,
+  .deck__add,
+  .slide-editor {
+    display: none !important;
+  }
+  .shell:has(.deck-page),
+  .shell:has(.deck-page) .main-col,
+  .shell:has(.deck-page) .main,
+  .deck-page,
+  .deck {
+    display: block;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  .deck-page {
+    page: deck;
+  }
+  .deck__item {
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .deck__item:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  .deck .slide {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 0;
+    border-radius: 0;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

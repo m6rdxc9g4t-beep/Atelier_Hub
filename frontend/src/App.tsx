@@ -14,6 +14,8 @@ import { api } from './lib/hub-api.ts'
 import { failureFeedback, refreshFailure, refreshProject, type ListRead } from './lib/refresh.ts'
 import { href, navigate, onLinkClick, projectPath, useRoute } from './lib/router.ts'
 import type { AppId, HubLink, HubProject, Overview } from './lib/types.ts'
+import { DeckView } from './views/DeckView.tsx'
+import { PresentationsView } from './views/PresentationsView.tsx'
 import { ProjectView, type ProjectActions } from './views/ProjectView.tsx'
 
 /** L'aperçu est figé au 10 novembre 2026 (date des données d'exemple). */
@@ -73,7 +75,11 @@ function Hub() {
     void loadProjects()
   }, [loadProjects])
 
-  const slug = route.name === 'project' ? route.slug : null
+  // La fiche courante vaut aussi pour ses présentations (la barre latérale la garde sélectionnée).
+  const slug = route.name === 'project' || route.name === 'presentations' || route.name === 'deck' ? route.slug : null
+  // La vue d'ensemble n'est lue que pour l'écran de la fiche : une présentation fait sa propre lecture de la suite.
+  const onProject = route.name === 'project'
+  const deckId = route.name === 'deck' ? route.id : null
   const current = useMemo(() => projects.find((p) => p.slug === slug) ?? null, [projects, slug])
 
   // Accueil : la dernière fiche ouverte (sinon la première) s'ouvre directement : le Hub est un aiguillage.
@@ -122,15 +128,19 @@ function Hub() {
   useEffect(() => {
     if (currentSlug !== null) writeLast(currentSlug)
   }, [currentSlug])
+  const shown = useRef<Overview | null>(null)
+  shown.current = overview
   useEffect(() => {
-    if (currentId === null) return
-    setOverview((o) => (o?.project.id === currentId ? o : null))
-    void loadOverview(currentId)
-  }, [currentId, loadOverview])
+    if (currentId === null || !onProject) return
+    // Retour des présentations : la fiche déjà lue reste affichée pendant sa relecture (un échec se dit par un message).
+    const kept = shown.current?.project.id === currentId
+    if (!kept) setOverview(null)
+    void loadOverview(currentId, kept)
+  }, [currentId, onProject, loadOverview])
 
   // Retour sur l'onglet (on revient d'une app ouverte depuis la fiche) : relecture discrète si la lecture date.
   useEffect(() => {
-    if (currentId === null || api.demo) return
+    if (currentId === null || !onProject || api.demo) return
     const onReturn = () => {
       const state = { visible: document.visibilityState === 'visible', busy: loading.current, loadedAt: loadedAt.current }
       if (shouldRefresh(state, Date.now())) void loadOverview(currentId, true, true)
@@ -141,7 +151,7 @@ function Hub() {
       document.removeEventListener('visibilitychange', onReturn)
       window.removeEventListener('focus', onReturn)
     }
-  }, [currentId, loadOverview])
+  }, [currentId, onProject, loadOverview])
 
   const refresh = useCallback(async () => {
     if (currentId === null) return
@@ -173,15 +183,21 @@ function Hub() {
     },
   }
 
-  const title = current?.name ?? (route.name === 'notFound' ? 'Page introuvable' : 'Atelier Hub')
+  // Titre de la présentation ouverte, dit par son écran une fois lue.
+  const [deckTitle, setDeckTitle] = useState<string | null>(null)
+  useEffect(() => setDeckTitle(null), [deckId])
+  const touchToday = useCallback(() => setToday(currentDay()), [])
+
+  const section = current === null ? null : route.name === 'deck' ? (deckTitle ?? `${current.name} · Présentations`) : route.name === 'presentations' ? `${current.name} · Présentations` : current.name
+  const title = section ?? (route.name === 'notFound' ? 'Page introuvable' : 'Atelier Hub')
   useEffect(() => {
-    document.title = current ? `${current.name} · Atelier Hub` : 'Atelier Hub'
-  }, [current])
+    document.title = section ? `${section} · Atelier Hub` : 'Atelier Hub'
+  }, [section])
 
   let main: ReactNode
   if (projectsError && projects.length === 0) {
     main = <ErrorState text={projectsError} onRetry={() => void loadProjects()} />
-  } else if (route.name === 'notFound' || (route.name === 'project' && !projectsLoading && !current)) {
+  } else if (route.name === 'notFound' || (slug !== null && !projectsLoading && !current)) {
     main = (
       <div className="empty-state">
         <h1 className="empty-state__title">Fiche introuvable</h1>
@@ -213,6 +229,10 @@ function Hub() {
         </div>
       </div>
     )
+  } else if (current && route.name === 'presentations') {
+    main = <PresentationsView key={current.id} project={current} today={today} onRead={touchToday} />
+  } else if (current && route.name === 'deck') {
+    main = <DeckView key={`${current.id}:${route.id}`} project={current} presentationId={route.id} today={today} onRead={touchToday} onTitle={setDeckTitle} />
   } else if (overview && current && overview.project.id === current.id) {
     main = <ProjectView overview={overview} today={today} actions={actions} refreshing={refreshing} />
   } else if (overviewError) {

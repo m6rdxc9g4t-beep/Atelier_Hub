@@ -3,7 +3,7 @@
 
 import snapshot from '../demo/snapshot.json'
 import { ApiError, type HubApi } from './api.ts'
-import type { Catalog, ExampleCatalog, HubProject, Overview } from './types.ts'
+import type { Catalog, Deck, ExampleCatalog, HubProject, Overview, PresentationSummary } from './types.ts'
 
 interface Snapshot {
   first: number
@@ -11,10 +11,13 @@ interface Snapshot {
   overviews: Record<string, Overview>
   catalogs: Record<string, Catalog>
   examples: ExampleCatalog
+  /** Présentations d'exemple, par fiche, et leur lecture résolue (figée comme le reste de l'aperçu). */
+  presentations: Record<string, PresentationSummary[]>
+  decks: Record<string, Deck>
 }
 
 const data = snapshot as unknown as Snapshot
-const readOnly = () => Promise.reject(new ApiError(403, 'DEMO', 'Aperçu : rien n’est enregistré. Lance le Hub sur ta machine pour modifier les fiches.'))
+const readOnly = () => Promise.reject(new ApiError(403, 'DEMO', 'Aperçu : rien n’est enregistré. Lance le Hub sur ta machine pour modifier les fiches et les présentations.'))
 const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 
 export const demoApi: HubApi = {
@@ -32,6 +35,19 @@ export const demoApi: HubApi = {
     return needle ? { ...catalog, candidates: catalog.candidates.filter((c) => normalize(`${c.label} ${c.detail ?? ''}`).includes(needle)) } : catalog
   },
   examples: async () => data.examples,
+  listPresentations: async (projectId) => data.presentations[String(projectId)] ?? [],
+  deck: async (presentationId) => {
+    const deck = data.decks[String(presentationId)]
+    if (!deck) throw new ApiError(404, 'NOT_FOUND', 'Présentation introuvable')
+    return deck
+  },
+  createPresentation: readOnly,
+  renamePresentation: readOnly,
+  deletePresentation: readOnly,
+  addSlide: readOnly,
+  updateSlide: readOnly,
+  removeSlide: readOnly,
+  reorderSlides: readOnly,
   openExampleProject: readOnly,
   createProject: readOnly,
   updateProject: readOnly,

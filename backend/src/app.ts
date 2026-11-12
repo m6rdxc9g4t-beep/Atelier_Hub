@@ -11,6 +11,7 @@ import type { Db } from './db/database.js'
 import { ApiError } from './http/errors.js'
 import { isAllowedHost, isAllowedOrigin, isWrite } from './http/guards.js'
 import { hubRoutes } from './routes/hub.js'
+import { presentationRoutes } from './routes/presentations.js'
 import { localToday, type SuiteContext } from './services/overview.js'
 
 export interface BuildOptions {
@@ -57,6 +58,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
 
   app.get('/api/health', async () => ({ status: 'ok', app: 'atelier-hub' }))
   hubRoutes(app, db, suite)
+  presentationRoutes(app, db, suite)
 
   if (config.staticDir && existsSync(join(config.staticDir, 'index.html'))) {
     const assetsDir = join(config.staticDir, 'assets') + sep
