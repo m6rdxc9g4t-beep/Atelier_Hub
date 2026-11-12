@@ -1,7 +1,7 @@
 // Accès à l'API du Hub. En mode « demo » (aperçu sans la suite), les lectures viennent de src/demo/snapshot.json
 // et les écritures sont refusées avec un message clair.
 
-import type { AppId, Catalog, ExampleCatalog, HubLink, HubProject, LinkApp, Overview } from './types.ts'
+import type { AppId, Catalog, Deck, ExampleCatalog, HubLink, HubProject, LinkApp, Overview, PresentationSummary } from './types.ts'
 
 export interface ProjectInput {
   name?: string
@@ -22,6 +22,13 @@ export interface LinkInput {
   note?: string
 }
 
+export interface PresentationInput {
+  /** Absent ou vide : « <fiche> — <mois année> ». */
+  title?: string
+  /** Bâtir le plan sur la fiche (défaut) ; false : la seule diapositive de titre. */
+  plan?: boolean
+}
+
 export interface HubApi {
   demo: boolean
   listProjects(): Promise<HubProject[]>
@@ -36,6 +43,13 @@ export interface HubApi {
   examples(signal?: AbortSignal): Promise<ExampleCatalog>
   /** Crée la fiche de l'histoire, ou la remet sur ce que les apps ont chargé depuis. */
   openExampleProject(storyId: string): Promise<HubProject>
+  listPresentations(projectId: number, signal?: AbortSignal): Promise<PresentationSummary[]>
+  /** « Générer » sans IA : le Hub lit la fiche et bâtit le plan. */
+  createPresentation(projectId: number, input: PresentationInput): Promise<PresentationSummary>
+  /** Présentation résolue : les apps sont relues à chaque appel. */
+  deck(presentationId: number, signal?: AbortSignal): Promise<Deck>
+  renamePresentation(presentationId: number, title: string): Promise<PresentationSummary>
+  deletePresentation(presentationId: number): Promise<void>
 }
 
 export class ApiError extends Error {
@@ -79,4 +93,9 @@ export const httpApi: HubApi = {
   catalog: (app, q, signal) => request('GET', `/api/catalog/${app}?q=${encodeURIComponent(q)}`, undefined, signal),
   examples: (signal) => request('GET', '/api/exemples-suite', undefined, signal),
   openExampleProject: (storyId) => request('POST', `/api/exemples-suite/${encodeURIComponent(storyId)}`),
+  listPresentations: (projectId, signal) => request('GET', `/api/projects/${projectId}/presentations`, undefined, signal),
+  createPresentation: (projectId, input) => request('POST', `/api/projects/${projectId}/presentations`, input),
+  deck: (presentationId, signal) => request('GET', `/api/presentations/${presentationId}`, undefined, signal),
+  renamePresentation: (presentationId, title) => request('PATCH', `/api/presentations/${presentationId}`, { title }),
+  deletePresentation: (presentationId) => request('DELETE', `/api/presentations/${presentationId}`),
 }

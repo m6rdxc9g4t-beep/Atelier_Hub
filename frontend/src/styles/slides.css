@@ -1,0 +1,93 @@
+/* ==========================================================================
+   Atelier Hub — présentations d'une fiche (liste, lecture d'une présentation, diapositives).
+   Même charte que hub.css : uniquement des jetons (--app-*, --accent*, --atelier-*, --status-*, --ds-*, et ceux
+   déclarés en tête de hub.css), aucune couleur littérale (vérifié par src/lib/design.test.ts). Plat, sans ombre,
+   aucune transition.
+   ========================================================================== */
+
+/* ── Écrans des présentations ────────────────────────────────────────────── */
+.presentations {
+  max-width: 880px;
+}
+.deck-page {
+  max-width: 1080px;
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--app-muted);
+  text-decoration: none;
+}
+.back-link:hover {
+  color: var(--accent-ink);
+}
+.back-link svg {
+  width: 14px;
+  height: 14px;
+}
+.read-only-note {
+  font-size: 12px;
+  color: var(--app-muted);
+}
+.presentations__loading {
+  padding: 16px 14px 4px;
+}
+.presentations__empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 40px 20px;
+  text-align: center;
+}
+.presentations__empty-title {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.presentations__empty-text {
+  max-width: 46ch;
+  margin: 0 0 10px;
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+/* Deux actions par ligne (renommer, supprimer) : seule la dernière garde la marge du bord. */
+.presentations .row__action:not(:last-child) {
+  margin-right: 0;
+}
+
+/* Message d'une fenêtre (échec d'une création, d'un renommage) : au-dessus de ses boutons, jamais une notification,
+   qui passerait sous la fenêtre. */
+.dialog-message {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+.dialog-message:empty {
+  display: none;
+}
+
+/* Plan d'une présentation : ses titres, dans l'ordre. */
+.deck-titles {
+  margin: 0;
+  padding: 10px 14px 10px 38px;
+  line-height: 2;
+}
+
+@media (max-width: 860px) {
+  .back-link {
+    min-height: 32px;
+  }
+}
+@media (pointer: coarse) {
+  .back-link {
+    min-height: 40px;
+  }
+}

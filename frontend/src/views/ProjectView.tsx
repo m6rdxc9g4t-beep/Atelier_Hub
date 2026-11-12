@@ -27,6 +27,7 @@ import { ExtLink } from '../components/ExtLink.tsx'
 import { useUi } from '../components/ui.tsx'
 import { count, dueIn, hours, plural, relativeDay, shortDate, STATUS_LABELS, STATUS_VARS, TYPE_LABELS } from '../lib/format.ts'
 import { clockTime } from '../lib/freshness.ts'
+import { href, onLinkClick, presentationsPath } from '../lib/router.ts'
 import { buildTimeline } from '../lib/timeline.ts'
 import type { AppId, HubLink, LinkApp, Overview, SourceItem, SourceKind, WorkItem } from '../lib/types.ts'
 
@@ -570,6 +571,10 @@ export function ProjectView({ overview, today, actions, refreshing }: { overview
           <button type="button" className="btn btn--ghost btn--icon" aria-label="Actualiser" title={readAt ? `Relire les apps (lues à ${readAt})` : 'Relire les apps'} onClick={actions.refresh} disabled={refreshing}>
             <RefreshCw className={refreshing ? 'spin' : undefined} />
           </button>
+          <a className="btn" href={href(presentationsPath(p.slug))} onClick={(e) => onLinkClick(e, presentationsPath(p.slug))}>
+            <Presentation aria-hidden />
+            Présentations
+          </a>
           <button type="button" className="btn" onClick={actions.edit}>
             <Pencil aria-hidden />
             Modifier

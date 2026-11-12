@@ -6,10 +6,14 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf
 const withoutComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')
 
 describe('charte de la suite', () => {
-  it('hub.css n’emploie que des jetons (aucune couleur littérale)', () => {
-    const css = withoutComments(read('../styles/hub.css'))
-    assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b/i)
-    assert.doesNotMatch(css, /\b(rgb|rgba|hsl|hsla|oklch)\(/i)
+  it('hub.css et slides.css n’emploient que des jetons (aucune couleur littérale)', () => {
+    for (const file of ['hub.css', 'slides.css']) {
+      const css = withoutComments(read(`../styles/${file}`))
+      assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b/i, file)
+      assert.doesNotMatch(css, /\b(rgb|rgba|hsl|hsla|oklch|oklab|lab|lch|hwb)\(/i, file)
+      assert.doesNotMatch(css, /:\s*(white|black|red|gray|grey)\s*[;}]/i, file)
+    }
+    assert.match(read('../styles/index.css'), /@import '\.\/hub\.css';\s*@import '\.\/slides\.css';/)
   })
 
   it('les actions d’une fenêtre passent à la ligne au lieu de sortir de la fenêtre', () => {

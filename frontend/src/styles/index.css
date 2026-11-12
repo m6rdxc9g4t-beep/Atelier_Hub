@@ -1,5 +1,5 @@
 /* Ordre : thèmes neutres et couleurs officielles (copies verbatim d'Atelier Projets), marque commune,
-   signature du Hub, jetons d'interface dérivés, puis l'interface du Hub. */
+   signature du Hub, jetons d'interface dérivés, puis l'interface du Hub et celle de ses présentations. */
 @import './atelier-ds/light.css';
 @import './atelier-ds/dark.css';
 @import './atelier-ds/colors.css';
@@ -7,3 +7,4 @@
 @import './hub-signature.css';
 @import './atelier-ds/ui.css';
 @import './hub.css';
+@import './slides.css';

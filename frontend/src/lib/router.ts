@@ -1,30 +1,18 @@
-// Routeur minimal (History API) ; en aperçu (page publiée), fragment simple « #<slug> » (seul accepté par l'hôte).
-//   /                 accueil : la dernière fiche ouverte
-//   /projet/<slug>    une fiche projet
+// Routeur minimal (History API) ; en aperçu (page publiée), fragment simple (seul accepté par l'hôte).
+// Les adresses elles-mêmes sont des règles pures : `routes.ts`.
 
 import { useSyncExternalStore, type MouseEvent } from 'react'
 
-export type Route = { name: 'home' } | { name: 'project'; slug: string } | { name: 'notFound' }
+import { hashToPath, parseRoute, pathToHash, type Route } from './routes.ts'
+
+export { deckPath, parseRoute, presentationsPath, projectPath, type Route } from './routes.ts'
 
 const HASH_MODE = import.meta.env.MODE === 'demo'
 
-export function parseRoute(path: string): Route {
-  const clean = decodeURIComponent(path).replace(/\/+$/, '') || '/'
-  if (clean === '/') return { name: 'home' }
-  const m = /^\/projet\/([a-z0-9-]+)$/.exec(clean)
-  if (m) return { name: 'project', slug: m[1]! }
-  return { name: 'notFound' }
-}
-
-export const projectPath = (slug: string) => `/projet/${slug}`
-const toHash = (path: string) => `#${path.replace(/^\/projet\//, '').replace(/^\/$/, '')}`
+const toHash = pathToHash
 export const href = (path: string) => (HASH_MODE ? toHash(path) : path)
 
-const currentPath = () => {
-  if (!HASH_MODE) return location.pathname
-  const slug = location.hash.replace(/^#/, '')
-  return slug ? `/projet/${slug}` : '/'
-}
+const currentPath = () => (HASH_MODE ? hashToPath(location.hash) : location.pathname)
 
 const listeners = new Set<() => void>()
 const emit = () => {
