@@ -42,6 +42,26 @@ Retirer l'exemple du Hub, c'est supprimer cette fiche (Modifier → Supprimer la
 
 « Mettre à jour la fiche » remet les rattachements Projets, Wiki et Tab sur ce que les apps ont chargé pour l'histoire ; un rattachement dont l'app n'a rien chargé (ou ne répond pas) n'est pas touché, ni le nom, la description, les mots-clés ou les éléments épinglés.
 
+## Présentations
+
+Depuis une fiche, « Présentations » ouvre ses présentations : des diapositives 16:9 bâties sur ce que le Hub lit du projet, lues dans le Hub, montrées en plein écran, exportées en PDF. Pas de fichier PowerPoint.
+
+- **Nouvelle présentation** : le Hub lit la fiche et propose le plan, sans IA et toujours dans le même ordre : titre, synthèse, chiffres clés, avancement des features, en cours et points de blocage, jalons, documentation, rapports (plus une diapositive par rapport épinglé, 3 au plus), tables, conversions, agents, sources. Une section n'entre que si la fiche a quelque chose à y montrer ; celles de Projets, du Wiki, de Viz et de Tab entrent aussi quand leur app ne répond pas ce jour-là (la diapositive le dit, puis se remplit). « Vide » ne crée que la diapositive de titre.
+- **Lire** : les diapositives s'empilent dans l'ordre. Viz et Tab y sont des chiffres et des listes (ceux que la fiche montre déjà), avec le lien vers le rapport ou vers l'app ; aucune image n'est reprise. Une app arrêtée garde sa diapositive (icône éteinte, message en rouge).
+- **Présenter** : plein écran, une diapositive à la fois. → ↓ PageDown Espace Entrée avancent, ← ↑ PageUp Maj+Espace reculent, Début / Fin, Échap quitte ; au doigt, les boutons de la barre du bas. Sur un téléphone tenu debout, la diapositive prend l'écran et défile. Les chiffres sont ceux lus à l'ouverture.
+- **Exporter en PDF** : ouvre l'impression du navigateur ; choisis « Enregistrer au format PDF ». Une diapositive par page 16:9, en clair même si le Hub est en sombre, sous le nom « Titre — Fiche ». Si le navigateur ignore la taille de page demandée, choisis le paysage : une diapositive par page, jamais coupée. Vérifié dans Chromium ; pas encore dans Safari ni Firefox.
+- **Modifier** : sous chaque diapositive, son titre et son texte (600 caractères, paragraphes et listes « - »), enregistrés à la sortie du champ ; « Phrase automatique » et un titre vidé reviennent à l'automatique. Monter, descendre, supprimer, « Ajouter une diapositive » (texte libre, ou une sorte qui lit la fiche — toute la liste, ou une seule page, un seul rapport, une seule table…) : tout se fait au clavier. La sorte d'une diapositive et l'élément qu'elle vise ne changent pas : on la supprime et on en ajoute une.
+
+### Texte rédigé contre chiffres vivants
+
+| | Ce que c'est | Où ça vit | Fraîcheur |
+|---|---|---|---|
+| **Structure** | quelles diapositives, dans quel ordre, de quelle sorte, visant quel élément | base du Hub (`presentations`, `slides`) | contenu du Hub |
+| **Texte rédigé** | le titre et le texte que tu as écrits | base du Hub (`slides.title`, `slides.body`), avec sa provenance et sa date | **daté**, jamais mis à jour tout seul |
+| **Chiffres vivants** | cartes de chiffres, listes, états, liens, titre automatique, phrase automatique | **nulle part** : calculés à chaque lecture, les apps sont relues | toujours du jour |
+
+Une diapositive **référence, elle ne copie pas** : elle garde sa sorte et, si elle vise un élément, son identifiant dans son app et son libellé au moment du choix (affiché si l'app ne répond pas, comme pour un élément épinglé). Aucun chiffre, aucune ligne, aucun extrait n'entre dans la base. Un titre ou un texte laissé vide est **automatique** : relu et recalculé à chaque ouverture, donc toujours juste. Ce que tu écris, lui, reste tel quel : l'éditeur le rappelle sous le champ (« Ton texte, modifié le 12 nov. »). Si un élément visé n'est plus dans la fiche, sa diapositive le dit au lieu de montrer un ancien chiffre.
+
 ## Lancer en local
 
 ```bash
@@ -117,6 +137,13 @@ Tab (app de bureau) n'a pas d'adresse par table : le clic ouvre Tab. Toutes ces 
 | `GET /api/catalog/:app?q=` | Ce qu'une app propose de rattacher ou d'épingler |
 | `GET /api/exemples-suite` | Histoires d'exemple lues dans les apps : où chacune est chargée (`loaded` / `absent` / `unavailable` : l'app ne livre pas cette histoire, rien à y charger / `down`), lien vers l'app, fiche du Hub si elle existe |
 | `POST /api/exemples-suite/:histoire` | Sans corps (tout champ est refusé, 422). Crée la fiche de l'histoire (201) ou la remet sur ce que les apps ont chargé depuis (200) ; les apps sont relues, rien n'y est écrit. Pas de `DELETE` : la fiche se supprime comme une autre |
+| `GET /api/projects/:id/presentations` | Présentations d'une fiche, les plus récentes d'abord (les apps ne sont pas lues) |
+| `POST /api/projects/:id/presentations` | `{ title?, plan? }` : crée une présentation. `plan` (vrai par défaut) : le Hub lit la fiche et bâtit le plan ; faux : la seule diapositive de titre |
+| `GET /api/presentations/:pid` | Présentation **résolue** : chaque diapositive enregistrée, plus sa partie vivante (`live` : cartes, lignes, lien, état, titre et phrase automatiques) relue dans les apps |
+| `PATCH /api/presentations/:pid`, `DELETE /api/presentations/:pid` | Renommer (`{ title }`), supprimer. Supprimer une fiche supprime ses présentations |
+| `POST /api/presentations/:pid/slides` | `{ kind, title?, body?, ref?, ref_label?, after? }` : ajoute une diapositive (40 au plus, 409 au-delà). `ref` seulement pour `wiki`, `viz`, `tab`, `convert`, `nexus`, avec `ref_label` |
+| `PATCH /api/presentations/:pid/slides/:sid` | `{ title?, body? }` : vide ou `null` = automatique ; un texte écrit devient `manual`, daté. La sorte et l'élément visé ne changent pas |
+| `DELETE /api/presentations/:pid/slides/:sid`, `PUT /api/presentations/:pid/order` | Supprimer une diapositive ; nouvel ordre `{ slide_ids }` (chaque diapositive une seule fois, 422 sinon) |
 | `GET /api/health` | `{ status: "ok", app: "atelier-hub" }` |
 
 Erreurs `{ detail, code }` en français. Gardes Host / Origin comme le Wiki (hôte inconnu ou écriture d'une autre origine → 403).
@@ -136,11 +163,16 @@ npm run check      # typage + tests (backend et frontend)
 ```
 backend/   Fastify + TypeScript + SQLite (better-sqlite3)
   src/connectors/  lecteurs des apps (HTTP borné, index Tab, exemples de la suite), jamais d'écriture
-  src/domain/      règles pures : mots-clés, synthèse Projets, classement des agents, liens profonds, exemples
-  src/services/    fiches et épinglés, vue d'ensemble, catalogue « Lier », exemples de la suite
+  src/domain/      règles pures : mots-clés, synthèse Projets, classement des agents, liens profonds, exemples,
+                   diapositives (slides.ts : partie vivante de chaque sorte ; plan.ts : plan proposé)
+  src/services/    fiches et épinglés, vue d'ensemble, catalogue « Lier », exemples de la suite,
+                   présentations (presentations.ts : seul à écrire ; decks.ts : lecture résolue)
   test/fixtures/   double de la suite (aussi utilisé pour l'aperçu)
 frontend/  React + TypeScript + Vite, CSS natif
   src/views/ProjectView.tsx   la fiche et ses panneaux
   src/components/ExamplesDialog.tsx   « Exemples de la suite » (règles : src/lib/examples.ts)
+  src/views/PresentationsView.tsx, DeckView.tsx   présentations d'une fiche, lecture et édition d'une présentation
+  src/components/Slide.tsx, Presenter.tsx, SlideEditor.tsx   la diapositive, le plein écran, l'éditeur
+                              (règles : src/lib/deck.ts, presenter.ts, print.ts ; styles : src/styles/slides.css)
   src/lib/                    API, aperçu, frise, mise en forme, routeur
 ```

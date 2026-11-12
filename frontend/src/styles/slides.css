@@ -511,6 +511,122 @@
   }
 }
 
+/* ── Mode « Modifier » : sous chaque diapositive, son éditeur ────────────────
+   Un panneau plat, de la largeur de la diapositive : titre à gauche, texte à droite, puis la ligne des messages et
+   des actions (retour à l'automatique, monter, descendre, supprimer). */
+.deck[data-editing] {
+  gap: 28px;
+}
+.deck[data-editing] .deck__item {
+  display: grid;
+  gap: 8px;
+}
+.slide-editor {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--app-surface);
+}
+.slide-editor__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 12px 16px;
+  align-items: start;
+}
+.slide-editor__field {
+  min-width: 0;
+}
+.slide-editor__count {
+  font-variant-numeric: tabular-nums;
+}
+.slide-editor textarea.field {
+  display: block;
+  min-height: 92px;
+}
+.slide-editor__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.slide-editor__messages {
+  display: flex;
+  flex: 1 1 240px;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.slide-editor__messages p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.slide-editor__messages p:empty {
+  display: none;
+}
+.slide-editor__status {
+  color: var(--app-muted);
+}
+.slide-editor__error {
+  flex: 1 1 100%;
+  font-weight: 500;
+  color: var(--danger);
+}
+.slide-editor__overflow {
+  font-weight: 500;
+  color: var(--warning);
+}
+.slide-editor__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  margin-left: auto;
+}
+.slide-editor__actions .btn:not(.btn--icon) {
+  margin-right: 6px;
+}
+.deck__add {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+.deck__empty {
+  margin: 0;
+  padding: 40px 20px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--app-surface);
+  color: var(--app-muted);
+  text-align: center;
+}
+/* En-tête d'une présentation : ses actions passent à la ligne plutôt que de sortir de l'écran. */
+.deck__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+@media screen and (max-width: 860px) {
+  .deck[data-editing] {
+    gap: 20px;
+  }
+  .slide-editor__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .deck__actions {
+    justify-content: flex-start;
+  }
+}
+/* Au doigt : champs à 16 px (en dessous, Safari zoome sur le champ qui reçoit le focus). */
+@media (pointer: coarse) {
+  .slide-editor .field,
+  .slide-add .field {
+    font-size: 16px;
+  }
+}
+
 /* ── Plein écran « Présenter » ────────────────────────────────────────────────
    Une fenêtre modale qui couvre toute la page (couche supérieure : au-dessus de la page passée en plein écran, ou de
    la page telle quelle quand le navigateur ne l'accorde pas). La scène est un conteneur : la diapositive y tient en

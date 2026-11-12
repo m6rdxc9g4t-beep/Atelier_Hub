@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { defaultTitle, longDay, moreText, presentationMeta, shownText, shownTitle } from './deck.ts'
-import type { DeckSlide, SlideLive } from './types.ts'
+import { readFileSync } from 'node:fs'
+
+import { applyOrder, applyRecord, defaultTitle, elementChoices, KIND_CHOICES, longDay, moreText, moveIds, presentationMeta, provenance, shownText, shownTitle, withoutSlide } from './deck.ts'
+import { SLIDE_KINDS, type Deck, type DeckSlide, type Overview, type SlideLive, type SlideRecord } from './types.ts'
 
 const live = (more: Partial<SlideLive> = {}): SlideLive => ({
   state: 'ok',
@@ -79,5 +81,126 @@ describe('présentations', () => {
     assert.equal(moreText(0), '')
     assert.equal(moreText(1), 'et 1 autre')
     assert.equal(moreText(4), 'et 4 autres')
+  })
+
+  // ─── Édition ───────────────────────────────────────────────────
+
+  const deck = (): Deck => ({
+    presentation: { id: 7, project_id: 1, title: 'Comité', slides: 3, created_at: '2026-11-01T08:00:00.000Z', updated_at: '2026-11-10T09:00:00.000Z' },
+    project: { id: 1 } as Deck['project'],
+    slides: [
+      slide({ id: 1, position: 0, kind: 'title', live: live({ auto_title: 'Comité', auto_text: 'Présentation du projet.' }) }),
+      slide({ id: 2, position: 1, body: 'Écrit par un modèle : 63 %.', text_source: 'ollama', text_model: 'llama3.2:1b', text_at: '2026-11-09T10:00:00.000Z', stale: ['63 %'] }),
+      slide({ id: 3, position: 2, kind: 'features', live: live({ auto_title: 'Avancement', rows: [{ id: 'f1', label: 'Connexion', detail: null, date: null, status: 'CLOSED', url: null }] }) }),
+    ],
+    generated_at: '2026-11-10T09:00:00.000Z',
+  })
+  const record = (source: DeckSlide, more: Partial<SlideRecord>): SlideRecord => {
+    const { live: _live, stale: _stale, ...rest } = source
+    return { ...rest, ...more }
+  }
+
+  it('fusionne un enregistrement sans perdre la partie vivante', () => {
+    const before = deck()
+    const saved = record(before.slides[2]!, { title: 'Où en sont les features ?', body: 'Deux sont terminées.', text_source: 'manual', text_at: '2026-11-10T14:32:00.000Z', updated_at: '2026-11-10T14:32:00.000Z' })
+    const after = applyRecord(before, saved)
+    const merged = after.slides[2]!
+    assert.equal(merged.title, 'Où en sont les features ?')
+    assert.equal(merged.body, 'Deux sont terminées.')
+    assert.equal(merged.text_source, 'manual')
+    // Cartes, lignes et titre automatique restent ceux de la dernière lecture des apps.
+    assert.deepEqual(merged.live, before.slides[2]!.live)
+    assert.equal(shownTitle(merged), 'Où en sont les features ?')
+    assert.equal(after.presentation.updated_at, '2026-11-10T14:32:00.000Z')
+    // Les autres diapositives ne bougent pas, la présentation d'origine non plus.
+    assert.equal(after.slides[0], before.slides[0])
+    assert.equal(before.slides[2]!.title, null)
+  })
+
+  it('revient à la phrase automatique sans relire la suite', () => {
+    const before = deck()
+    const after = applyRecord(before, record(before.slides[1]!, { body: null, text_source: 'auto', text_model: null, text_at: null }))
+    assert.equal(shownText(after.slides[1]!), '5 features terminées sur 8 (63 %).')
+    // « À relire » jugeait l'ancien texte : il tombe avec lui.
+    assert.deepEqual(after.slides[1]!.stale, [])
+  })
+
+  it('garde « à relire » tant que le texte ne change pas, et ignore une diapositive inconnue', () => {
+    const before = deck()
+    assert.deepEqual(applyRecord(before, record(before.slides[1]!, { title: 'Avancement' })).slides[1]!.stale, ['63 %'])
+    assert.equal(applyRecord(before, record(before.slides[1]!, { id: 99 })), before)
+  })
+
+  it('applique l’ordre rendu par le Hub', () => {
+    const before = deck()
+    const order = [before.slides[2]!, before.slides[0]!, before.slides[1]!].map((s, position) => record(s, { position }))
+    const after = applyOrder(before, order)
+    assert.deepEqual(after.slides.map((s) => [s.id, s.position]), [[3, 0], [1, 1], [2, 2]])
+    assert.deepEqual(after.slides[0]!.live, before.slides[2]!.live)
+    assert.deepEqual(after.slides[2]!.stale, ['63 %'])
+    assert.equal(after.presentation.slides, 3)
+  })
+
+  it('retire une diapositive et resserre les positions', () => {
+    const after = withoutSlide(deck(), 2)
+    assert.deepEqual(after.slides.map((s) => [s.id, s.position]), [[1, 0], [3, 1]])
+    assert.equal(after.presentation.slides, 2)
+    assert.equal(withoutSlide(deck(), 99).slides.length, 3)
+  })
+
+  it('monte et descend une diapositive, sauf aux bords', () => {
+    assert.deepEqual(moveIds([1, 2, 3], 2, -1), [2, 1, 3])
+    assert.deepEqual(moveIds([1, 2, 3], 2, 1), [1, 3, 2])
+    assert.equal(moveIds([1, 2, 3], 1, -1), null)
+    assert.equal(moveIds([1, 2, 3], 3, 1), null)
+    assert.equal(moveIds([1, 2, 3], 9, 1), null)
+    assert.equal(moveIds([1], 1, 1), null)
+    // L'ordre reçu n'est pas modifié.
+    const ids = [1, 2, 3]
+    moveIds(ids, 1, 1)
+    assert.deepEqual(ids, [1, 2, 3])
+  })
+
+  it('dit d’où vient le texte, et de quand', () => {
+    const today = '2026-11-12'
+    assert.equal(provenance(slide(), today), 'Phrase automatique, toujours à jour')
+    assert.equal(provenance(slide({ kind: 'text' }), today), 'Pas encore de texte')
+    assert.equal(provenance(slide({ body: 'Mon texte.', text_source: 'manual', text_at: '2026-11-12T12:00:00.000Z' }), today), 'Ton texte, modifié le 12 nov.')
+    assert.equal(provenance(slide({ body: 'Texte.', text_source: 'ollama', text_model: 'llama3.2:1b', text_at: '2026-11-12T12:00:00.000Z' }), today), 'Rédigé par Ollama (llama3.2:1b) le 12 nov.')
+    assert.equal(provenance(slide({ body: 'Texte.', text_source: 'claude', text_model: 'sonnet', text_at: '2026-11-12T12:00:00.000Z' }), today), 'Rédigé par Claude (Sonnet) le 12 nov.')
+    // Une autre année s'écrit ; un modèle ou une date absents ne laissent pas de trou dans la phrase.
+    assert.equal(provenance(slide({ body: 'Mon texte.', text_source: 'manual', text_at: '2025-12-03T12:00:00.000Z' }), today), 'Ton texte, modifié le 3 déc. 2025')
+    assert.equal(provenance(slide({ body: 'Texte.', text_source: 'claude', text_model: null, text_at: null }), today), 'Rédigé par Claude')
+  })
+
+  it('propose toutes les sortes du Hub, sous les mêmes noms, « Texte libre » en tête', () => {
+    assert.equal(KIND_CHOICES[0]!.kind, 'text')
+    assert.deepEqual([...KIND_CHOICES.map((c) => c.kind)].sort(), [...SLIDE_KINDS].sort())
+    // `KIND_INFO` du Hub fait foi : nom de la sorte, et si elle peut viser un élément.
+    const source = readFileSync(new URL('../../../backend/src/domain/slides.ts', import.meta.url), 'utf8')
+    for (const choice of KIND_CHOICES) {
+      const info = source.match(new RegExp(`^  ${choice.kind}: \\{ label: '([^']+)',.*refKind: (null|'[a-z]+'),`, 'm'))
+      assert.ok(info, `${choice.kind} est dans KIND_INFO`)
+      assert.equal(choice.label, info[1], choice.kind)
+      assert.equal(choice.element !== null, info[2] !== 'null', `${choice.kind} : vise un élément`)
+      assert.equal(choice.elementLabel !== null, choice.element !== null, choice.kind)
+    }
+  })
+
+  it('propose les éléments que la fiche montre, avec l’identifiant que le Hub compare', () => {
+    const panel = <T,>(items: T[], state = 'ok') => ({ state, message: null, url: 'http://127.0.0.1/', items })
+    const overview = {
+      wiki: { ...panel([{ id: '12', title: 'Dictionnaire des indicateurs' }]), space: null, mode: 'space' },
+      viz: panel([{ id: 'a1', name: 'Tableau mensuel' }]),
+      tab: panel([{ id: 'tbl_1', name: 'Réalisé mensuel' }]),
+      convert: panel([{ id: 'c9', name: 'Extraction SAP' }], 'down'),
+      nexus: panel([{ name: 'data_analyst', display_name: 'Data Analyst / Power BI' }]),
+    } as unknown as Overview
+    assert.deepEqual(elementChoices(overview, 'wiki'), [{ ref: '12', label: 'Dictionnaire des indicateurs' }])
+    assert.deepEqual(elementChoices(overview, 'viz'), [{ ref: 'a1', label: 'Tableau mensuel' }])
+    assert.deepEqual(elementChoices(overview, 'tab'), [{ ref: 'tbl_1', label: 'Réalisé mensuel' }])
+    assert.deepEqual(elementChoices(overview, 'nexus'), [{ ref: 'data_analyst', label: 'Data Analyst / Power BI' }])
+    // Une app arrêtée ne propose rien : seuls les libellés gardés par le Hub resteraient, sans garantie d'exister.
+    assert.deepEqual(elementChoices(overview, 'convert'), [])
   })
 })
