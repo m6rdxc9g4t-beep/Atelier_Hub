@@ -300,11 +300,12 @@ textarea.field {
 .sidebar__tools {
   padding: 4px 8px;
 }
-.nav-link--quiet {
+/* Sélecteur à deux classes : il l'emporte sur `.nav-link`, déclaré plus bas. */
+.nav-link.nav-link--quiet {
   color: var(--app-muted);
   font-weight: 400;
 }
-.nav-link--quiet:hover {
+.nav-link.nav-link--quiet:hover {
   color: var(--app-text);
 }
 .sidebar__foot {
