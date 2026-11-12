@@ -3,7 +3,7 @@
 // lignes, liens, états, titre et phrase automatiques) se calcule ici, à chaque lecture, à partir de la vue
 // d'ensemble de la fiche (les apps viennent d'être relues). Une seule fonction par sorte : ce qu'elle affiche.
 
-import { capitalized, countText, hoursText, localDay, longDate, percentText, pluralText, quoted, shortDate, SOURCE_KIND_TEXT, TYPE_TEXT } from './french.js'
+import { capitalized, countText, hoursText, localDay, longDate, percentText, percentValue, pluralText, quoted, shortDate, shortened, SOURCE_KIND_TEXT, TYPE_TEXT } from './french.js'
 import { APP_LABELS } from './relevance.js'
 import {
   SOURCE_KINDS,
@@ -183,7 +183,7 @@ function featuresText(features: readonly WorkItem[]): string {
 function featureRow(item: WorkItem): SlideRow {
   const hours = item.hours_estimated !== null ? `${hoursText(item.hours_spent)} / ${hoursText(item.hours_estimated)}` : item.hours_spent > 0 ? hoursText(item.hours_spent) : null
   return row(item.id, item.title, {
-    detail: joined([item.progress !== null && `${Math.round(item.progress)} %`, hours], ' · '),
+    detail: joined([item.progress !== null && percentValue(item.progress), hours], ' · '),
     date: item.due,
     status: item.status,
     url: item.url,
@@ -199,12 +199,25 @@ function activeText(items: readonly WorkItem[]): string {
   return `${head}, dont ${pluralText(blocked.length, 'bloqué', 'bloqués')} : ${named.join(', ')}${rest > 0 ? ` et ${pluralText(rest, 'autre', 'autres')}` : ''}.`
 }
 
-function milestonesText(milestones: readonly Milestone[]): string {
+/**
+ * « Prochain jalon » : le premier jalon non atteint dont la date est à venir, comme la prochaine échéance des chiffres
+ * clés (`computeKpis`) : la synthèse et cette diapositive nomment le même. Un jalon non atteint dont la date est
+ * passée est dit en retard, à part ; un jalon sans date n'est ni l'un ni l'autre. La liste arrive triée par date.
+ */
+function milestonesText(milestones: readonly Milestone[], today: string): string {
   const reached = milestones.filter((m) => m.reached).length
-  const next = milestones.find((m) => !m.reached)
-  const count = reached === 0 ? `Aucun jalon atteint sur ${countText(milestones.length)}.` : `${pluralText(reached, 'jalon atteint', 'jalons atteints')} sur ${countText(milestones.length)}.`
-  if (!next) return count
-  return `Prochain jalon : ${quoted(next.name)}${next.date ? `, le ${dayText(next.date)}` : ''}. ${count}`
+  const dated = milestones.filter((m): m is Milestone & { date: string } => !m.reached && m.date !== null)
+  const next = dated.find((m) => localDay(m.date) >= today)
+  const late = dated.filter((m) => localDay(m.date) < today)
+  const sentences: string[] = []
+  if (next) sentences.push(`Prochain jalon : ${quoted(next.name)}, le ${dayText(next.date)}.`)
+  const first = late[0]
+  if (first) {
+    const rest = late.length - 1
+    sentences.push(`${pluralText(late.length, 'jalon en retard', 'jalons en retard')} : ${quoted(first.name)}, prévu le ${dayText(first.date)}${rest > 0 ? `, et ${pluralText(rest, 'autre', 'autres')}` : ''}.`)
+  }
+  sentences.push(reached === 0 ? `Aucun jalon atteint sur ${countText(milestones.length)}.` : `${pluralText(reached, 'jalon atteint', 'jalons atteints')} sur ${countText(milestones.length)}.`)
+  return sentences.join(' ')
 }
 
 function kpiFigures(k: Kpis): SlideFigure[] {
@@ -244,9 +257,12 @@ function resolveKpis(record: SlideRecord, overview: Overview): SlideLive {
 
 // ─── Fiche : titre, synthèse, sources ────────────────────────────
 
+/** Sous-titre de la diapositive de titre : au-delà, la description de la fiche (2 000 caractères admis) sortirait de la diapositive. */
+export const TITLE_TEXT_MAX = 300
+
 function resolveTitle(record: SlideRecord, overview: Overview, presentationTitle: string): SlideLive {
   const { project } = overview
-  return { ...blank(record), auto_title: presentationTitle, auto_text: project.description.trim() || `Présentation du projet ${project.name}.` }
+  return { ...blank(record), auto_title: presentationTitle, auto_text: shortened(project.description, TITLE_TEXT_MAX) || `Présentation du projet ${project.name}.` }
 }
 
 function summaryText(overview: Overview): string {
@@ -408,8 +424,11 @@ function nexusSpec(overview: Overview): PanelSpec<AgentItem> {
 
 // ─── Résolution ──────────────────────────────────────────────────
 
-/** Partie vivante d'une diapositive, y compris son titre et sa phrase automatiques. */
-export function resolveSlide(record: SlideRecord, overview: Overview, presentationTitle: string): SlideLive {
+/**
+ * Partie vivante d'une diapositive, y compris son titre et sa phrase automatiques. `today` (`AAAA-MM-JJ`) est le jour
+ * de la lecture, celui qui a servi à la vue d'ensemble : un jalon est à venir ou en retard par rapport à lui.
+ */
+export function resolveSlide(record: SlideRecord, overview: Overview, presentationTitle: string, today: string): SlideLive {
   const projets = { panel: overview.projets, id: (item: WorkItem) => item.id, name: (item: WorkItem) => item.title, open: openProjets(overview) }
   switch (record.kind) {
     case 'title':
@@ -436,7 +455,7 @@ export function resolveSlide(record: SlideRecord, overview: Overview, presentati
         name: (m) => m.name,
         open: openProjets(overview),
         row: (m) => row(m.id, m.name, { detail: m.reached ? 'atteint' : null, date: m.date }),
-        text: milestonesText,
+        text: (milestones) => milestonesText(milestones, today),
         empty: 'Aucun jalon pour l’instant.',
       })
     case 'wiki':
@@ -457,11 +476,11 @@ export function resolveSlide(record: SlideRecord, overview: Overview, presentati
 }
 
 /** Présentation résolue : chaque diapositive enregistrée, avec sa partie vivante. */
-export function resolveDeck(presentation: PresentationSummary, records: readonly SlideRecord[], overview: Overview): Deck {
+export function resolveDeck(presentation: PresentationSummary, records: readonly SlideRecord[], overview: Overview, today: string): Deck {
   return {
     presentation,
     project: overview.project,
-    slides: records.map((record) => ({ ...record, live: resolveSlide(record, overview, presentation.title), stale: [] })),
+    slides: records.map((record) => ({ ...record, live: resolveSlide(record, overview, presentation.title, today), stale: [] })),
     generated_at: overview.generated_at,
   }
 }

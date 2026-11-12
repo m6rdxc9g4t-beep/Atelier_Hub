@@ -12,9 +12,15 @@ export interface PlannedSlide {
 
 export const PLAN_LIMITS = { pinnedReports: 3 } as const
 
-/** « KPI CGO — novembre 2026 » */
-export function defaultTitle(projectName: string, today: string): string {
-  return `${projectName} — ${monthYear(today)}`
+/**
+ * « KPI CGO — novembre 2026 ». Avec `max`, c'est le nom de la fiche qui est abrégé (« … ») pour que le titre tienne :
+ * le mois reste lisible. Un nom de fiche admet autant de caractères qu'un titre de présentation.
+ */
+export function defaultTitle(projectName: string, today: string, max = Infinity): string {
+  const tail = ` — ${monthYear(today)}`
+  const room = Math.max(1, max - tail.length)
+  const name = projectName.length > room ? `${projectName.slice(0, room - 1).trimEnd()}…` : projectName
+  return `${name}${tail}`
 }
 
 const list = (kind: SlideKind): PlannedSlide => ({ kind, ref: null, ref_label: null })

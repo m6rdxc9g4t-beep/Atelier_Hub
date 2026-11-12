@@ -72,6 +72,23 @@ describe('présentations d’une fiche', () => {
     assert.equal(created.body.title, 'KPI CGO — novembre 2026')
   })
 
+  it('coupe le titre par défaut d’une fiche au nom très long, avec ou sans corps', async () => {
+    const { call } = await setup()
+    // Le nom d'une fiche admet 120 caractères, comme le titre d'une présentation : avec le mois, il dépasse.
+    const name = `${'Refonte du contrôle de gestion '.repeat(4).slice(0, 111)}s`
+    const long = (await call<HubProject>('POST', '/api/projects', { name })).body
+    assert.equal(long.name.length, 112)
+    for (const payload of [undefined, {}, { plan: false }, { title: '   ', plan: false }]) {
+      const created = await call<PresentationSummary>('POST', `/api/projects/${long.id}/presentations`, payload)
+      assert.equal(created.status, 201, JSON.stringify(payload))
+      // C'est le nom de la fiche qui est abrégé : le mois reste lisible.
+      assert.equal(created.body.title, `${name.slice(0, 103)}… — novembre 2026`)
+      assert.equal(created.body.title.length, LIMITS.title)
+    }
+    // Un titre écrit par l'appelant, lui, reste refusé s'il dépasse.
+    assert.equal((await call('POST', `/api/projects/${long.id}/presentations`, { title: 'x'.repeat(LIMITS.title + 1), plan: false })).status, 422)
+  })
+
   it('refuse une fiche inconnue, un titre vide ou trop long, un champ inconnu', async () => {
     const ctx = await setup()
     const { call, project } = ctx
@@ -343,7 +360,7 @@ describe('« Générer » sans IA', () => {
       'KPI CGO — novembre 2026', 'Synthèse', 'Chiffres clés', 'Avancement des features', 'En cours et points de blocage', 'Jalons',
       'Documentation', 'Rapports', 'KPI CGO — Tableau mensuel', 'Tables', 'Conversions', 'Agents', 'Sources',
     ])
-    assert.equal(ctx.slide(deck, 'kpis').live.figures[0]!.value, '66,5 h')
+    assert.equal(ctx.slide(deck, 'kpis').live.figures[0]!.value, '66,5\u00a0h')
     assert.ok(deck.slides.every((s) => s.kind === 'text' || s.live.auto_text.length > 0))
     // Une lecture de la présentation = une lecture de la suite (chaque app une fois).
     const calls = ctx.suite.calls.slice(before)
@@ -356,18 +373,18 @@ describe('« Générer » sans IA', () => {
     const ctx = await generated()
     const stored = ctx.stored()
     const first = await ctx.read()
-    assert.deepEqual(ctx.slide(first, 'kpis').live.figures.map((f) => f.value).slice(0, 2), ['66,5 h', '2 / 6'])
-    assert.equal(ctx.slide(first, 'kpis').live.auto_text, '2 features terminées sur 6 (33 %). 66,5 h passées sur 100 h estimées (67 %).')
+    assert.deepEqual(ctx.slide(first, 'kpis').live.figures.map((f) => f.value).slice(0, 2), ['66,5\u00a0h', '2 / 6'])
+    assert.equal(ctx.slide(first, 'kpis').live.auto_text, '2 features terminées sur 6 (33\u00a0%). 66,5\u00a0h passées sur 100\u00a0h estimées (67\u00a0%).')
     assert.equal(ctx.slide(first, 'viz', REPORT.ref).live.auto_title, 'KPI CGO — Tableau mensuel')
 
     // Le lendemain dans les apps : une feature terminée, des heures saisies, le rapport renommé et agrandi.
     ctx.replaced.set('http://projets/api/atelier/projects/4/work-items', table('work-items', WORK_ITEMS.map((item) => (item.id === 103 ? { ...item, statut_code: 'CLOSED', heures_passees: 30, avancement: 100 } : item))))
     ctx.replaced.set('http://viz/api/reports', [{ id: REPORT.ref, name: 'KPI CGO — Tableau de bord', pages: 4, visuals: 20, bookmarks: 0, updated_at: '2026-11-11T12:00:00Z' }])
     const second = await ctx.read()
-    assert.deepEqual(ctx.slide(second, 'kpis').live.figures.map((f) => f.value).slice(0, 2), ['78 h', '3 / 6'])
-    assert.equal(ctx.slide(second, 'kpis').live.auto_text, '3 features terminées sur 6 (50 %). 78 h passées sur 100 h estimées (78 %).')
+    assert.deepEqual(ctx.slide(second, 'kpis').live.figures.map((f) => f.value).slice(0, 2), ['78\u00a0h', '3 / 6'])
+    assert.equal(ctx.slide(second, 'kpis').live.auto_text, '3 features terminées sur 6 (50\u00a0%). 78\u00a0h passées sur 100\u00a0h estimées (78\u00a0%).')
     assert.equal(ctx.slide(second, 'features').live.auto_text, '6 features : 3 terminées, 1 en cours, 2 à faire.')
-    assert.match(ctx.slide(second, 'summary').live.auto_text, /^- Avancement : 3 features terminées sur 6 \(50 %\)\./)
+    assert.match(ctx.slide(second, 'summary').live.auto_text, /^- Avancement : 3 features terminées sur 6 \(50\u00a0%\)\./)
     const report = ctx.slide(second, 'viz', REPORT.ref)
     assert.deepEqual([report.live.auto_title, report.live.auto_text, report.ref_label], ['KPI CGO — Tableau de bord', '4 pages · 20 visuels, modifié le 11 novembre 2026.', REPORT.label])
     assert.equal(ctx.slide(second, 'viz').live.auto_text, '1 rapport dans Atelier Viz ; le plus récent : « KPI CGO — Tableau de bord ».')

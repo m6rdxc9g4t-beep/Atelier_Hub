@@ -1,26 +1,32 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { capitalized, countText, hoursText, localDay, longDate, monthYear, percentText, pluralText, quoted, shortDate, SOURCE_KIND_TEXT, STATUS_TEXT, TYPE_TEXT } from '../src/domain/french.js'
+import { capitalized, countText, hoursText, localDay, longDate, monthYear, NBSP, percentText, percentValue, pluralText, quoted, shortDate, shortened, SOURCE_KIND_TEXT, STATUS_TEXT, TYPE_TEXT } from '../src/domain/french.js'
 import { buildPlan, defaultTitle, PLAN_LIMITS } from '../src/domain/plan.js'
-import { KIND_INFO, resolveDeck, resolveSlide } from '../src/domain/slides.js'
+import { KIND_INFO, resolveDeck, resolveSlide, TITLE_TEXT_MAX } from '../src/domain/slides.js'
 import { SLIDE_KINDS, SOURCE_KINDS, type HubProject, type Overview, type SlideKind, type SlideLive, type SlideRecord } from '../src/domain/types.js'
 import { LINK_KINDS } from '../src/services/projects.js'
 import { kpiCgo, startHub } from './fixtures/hub.js'
 
 // Séparateur de milliers de `toLocaleString('fr-FR')` : espace fine insécable.
 const FINE = ' '
+/** Écrit les unités comme le Hub : « 42 h » et « 63 % » avec une espace insécable (jamais coupés en fin de ligne). */
+const nb = (text: string) => text.replace(/(\d) (h|%)/g, `$1${NBSP}$2`)
 
 describe('mise en forme française', () => {
   it('écrit les heures, les nombres et les pourcentages comme la fiche', () => {
-    assert.equal(hoursText(42), '42 h')
-    assert.equal(hoursText(42.5), '42,5 h')
-    assert.equal(hoursText(67.49), '67,5 h')
-    assert.equal(hoursText(0), '0 h')
+    assert.equal(NBSP, '\u00a0')
+    assert.equal(hoursText(42), '42\u00a0h')
+    assert.equal(hoursText(42.5), '42,5\u00a0h')
+    assert.equal(hoursText(67.49), '67,5\u00a0h')
+    assert.equal(hoursText(0), '0\u00a0h')
     assert.equal(countText(1240), `1${FINE}240`)
     assert.equal(countText(7), '7')
-    assert.equal(percentText(5, 8), '63 %')
-    assert.equal(percentText(0, 8), '0 %')
+    assert.equal(percentText(5, 8), '63\u00a0%')
+    assert.equal(percentText(0, 8), '0\u00a0%')
+    assert.equal(percentValue(69.6), '70\u00a0%')
+    // Un nombre et son unité ne se séparent jamais en fin de ligne : aucune espace ordinaire entre eux.
+    for (const text of [hoursText(1240.5), percentText(2, 3)!, percentValue(100)]) assert.doesNotMatch(text, /\d [h%]/)
     assert.equal(percentText(3, 0), null)
     assert.equal(percentText(3, -1), null)
   })
@@ -37,6 +43,9 @@ describe('mise en forme française', () => {
     assert.equal(localDay('pas une date du tout'), 'pas une da')
     assert.equal(longDate('bientôt'), 'bientôt')
     assert.equal(defaultTitle('KPI CGO', '2026-11-10'), 'KPI CGO — novembre 2026')
+    assert.equal(defaultTitle('KPI CGO', '2026-11-10', 120), 'KPI CGO — novembre 2026')
+    assert.equal(defaultTitle('Contrôle de gestion', '2026-11-10', 30), 'Contrôle de g… — novembre 2026')
+    assert.equal(defaultTitle('x'.repeat(120), '2026-11-10', 120).length, 120)
   })
 
   it('accorde, cite et coupe', () => {
@@ -48,6 +57,12 @@ describe('mise en forme française', () => {
     assert.equal(quoted('  Sur\ndeux   lignes '), '« Sur deux lignes »')
     assert.equal(quoted('abcdefghij', 5), '« abcd… »')
     assert.equal(quoted('x'.repeat(80)), `« ${'x'.repeat(80)} »`)
+    assert.equal(shortened('  Interface KPI  ', 300), 'Interface KPI')
+    assert.equal(shortened('Un deux trois quatre', 12), 'Un deux…')
+    assert.equal(shortened('Un deux, trois quatre', 10), 'Un deux…')
+    assert.equal(shortened('x'.repeat(30), 10), `${'x'.repeat(9)}…`)
+    assert.equal(shortened('Premier paragraphe.\n\nSecond.', 300), 'Premier paragraphe.\n\nSecond.')
+    assert.ok(shortened('mot '.repeat(500), 300).length <= 300)
     assert.equal(quoted('x'.repeat(81)), `« ${'x'.repeat(79)}… »`)
     assert.equal(capitalized('modifié le 9'), 'Modifié le 9')
     assert.equal(capitalized(''), '')
@@ -104,7 +119,9 @@ async function kpiOverview(): Promise<Overview> {
 }
 
 const TITLE = 'KPI CGO — novembre 2026'
-const live = (overview: Overview, kind: SlideKind, more: Partial<SlideRecord> = {}) => resolveSlide(record(kind, more), overview, TITLE)
+/** Jour de la lecture : celui du Hub de test (`startHub`). */
+const TODAY = '2026-11-10'
+const live = (overview: Overview, kind: SlideKind, more: Partial<SlideRecord> = {}, today = TODAY) => resolveSlide(record(kind, more), overview, TITLE, today)
 const labels = (slide: SlideLive) => slide.rows.map((r) => r.label)
 const downPanel = <T extends { state: string; message: string | null }>(panel: T, app: string, items: unknown[] = []) => ({ ...panel, state: 'down' as const, message: `${app} ne répond pas`, items })
 
@@ -166,6 +183,12 @@ describe('partie vivante d’une diapositive', () => {
     assert.deepEqual([slide.state, slide.auto_title, slide.auto_text, slide.app, slide.url], ['ok', TITLE, 'Interface KPI du contrôle de gestion', null, null])
     const bare = live({ ...overview, project: { ...overview.project, description: '  ' } }, 'title')
     assert.equal(bare.auto_text, 'Présentation du projet KPI CGO.')
+    // Une longue description (la fiche en admet 2 000 caractères) est coupée à la fin d'un mot : elle sortirait de la diapositive.
+    const long = live({ ...overview, project: { ...overview.project, description: 'Suivi des indicateurs du contrôle de gestion. '.repeat(40) } }, 'title')
+    assert.ok(long.auto_text.length <= TITLE_TEXT_MAX, String(long.auto_text.length))
+    assert.match(long.auto_text, /^Suivi des indicateurs du contrôle de gestion\. .*[a-zé]…$/)
+    const short = 'Suivi des indicateurs. '.repeat(13).trim()
+    assert.equal(live({ ...overview, project: { ...overview.project, description: short } }, 'title').auto_text, short)
   })
 
   it('synthèse : avancement, blocages, prochaine échéance, ce qui est rattaché', async () => {
@@ -173,7 +196,7 @@ describe('partie vivante d’une diapositive', () => {
     const slide = live(overview, 'summary')
     assert.equal(slide.auto_title, 'Synthèse')
     assert.deepEqual(slide.auto_text.split('\n'), [
-      '- Avancement : 2 features terminées sur 6 (33 %).',
+      nb('- Avancement : 2 features terminées sur 6 (33 %).'),
       '- 6 éléments en cours, dont 1 bloqué.',
       '- Prochaine échéance : « Écart d’arrondi sur le total trimestriel », le 13 novembre 2026.',
       '- 5 pages, 2 rapports, 3 tables, 2 conversions, 7 sources.',
@@ -193,23 +216,23 @@ describe('partie vivante d’une diapositive', () => {
     const overview = await kpiOverview()
     const slide = live(overview, 'kpis')
     assert.deepEqual(slide.figures, [
-      { label: 'Temps passé', value: '66,5 h', note: 'sur 100 h estimées · 67 %', warn: false },
+      { label: 'Temps passé', value: nb('66,5 h'), note: nb('sur 100 h estimées · 67 %'), warn: false },
       { label: 'Features', value: '2 / 6', note: 'terminées', warn: false },
       { label: 'En cours', value: '6', note: 'dont 1 bloquée', warn: true },
       { label: 'Prochaine échéance', value: '13 nov. 2026', note: 'Écart d’arrondi sur le total trimestriel', warn: false },
     ])
-    assert.equal(slide.auto_text, '2 features terminées sur 6 (33 %). 66,5 h passées sur 100 h estimées (67 %).')
+    assert.equal(slide.auto_text, nb('2 features terminées sur 6 (33 %). 66,5 h passées sur 100 h estimées (67 %).'))
     assert.deepEqual([slide.auto_title, slide.app, slide.url, slide.url_label], ['Chiffres clés', 'projets', 'http://127.0.0.1:4174/?projet=4', 'Ouvrir le projet dans Atelier Projets'])
     assert.deepEqual(slide.rows, [])
 
     const quiet = live({ ...overview, kpis: { hours_spent: 1.5, hours_estimated: 0, features_total: 3, features_done: 0, active: 0, blocked: 0, next_due: { label: 'Recette', date: '2026-12-01', kind: 'milestone' } } }, 'kpis')
     assert.deepEqual(quiet.figures.map((f) => [f.value, f.note, f.warn]), [
-      ['1,5 h', 'aucune estimation', false],
+      [nb('1,5 h'), 'aucune estimation', false],
       ['0 / 3', 'terminées', false],
       ['0', 'rien de bloqué', false],
       ['1 déc. 2026', 'jalon Recette', false],
     ])
-    assert.equal(quiet.auto_text, 'Aucune feature terminée sur 3. 1,5 h passée, sans estimation.')
+    assert.equal(quiet.auto_text, nb('Aucune feature terminée sur 3. 1,5 h passée, sans estimation.'))
     const empty = live({ ...overview, kpis: { hours_spent: 0, hours_estimated: 0, features_total: 0, features_done: 0, active: 0, blocked: 0, next_due: null } }, 'kpis')
     assert.deepEqual([empty.figures[3]!.value, empty.figures[3]!.note, empty.auto_text], ['—', 'aucune date à venir', 'Aucun chiffre pour l’instant.'])
   })
@@ -222,7 +245,7 @@ describe('partie vivante d’une diapositive', () => {
     assert.deepEqual(features.rows[2], {
       id: '103',
       label: 'Tableau de bord mensuel',
-      detail: '70 % · 18,5 h / 24 h',
+      detail: nb('70 % · 18,5 h / 24 h'),
       date: '2026-11-21',
       status: 'IN_PROGRESS',
       url: 'http://127.0.0.1:4174/?projet=4&element=103',
@@ -246,6 +269,25 @@ describe('partie vivante d’une diapositive', () => {
     ])
     const reached = live({ ...overview, projets: { ...overview.projets, milestones: overview.projets.milestones.map((m) => ({ ...m, reached: true })) } }, 'milestones')
     assert.equal(reached.auto_text, '3 jalons atteints sur 3.')
+
+    // « Prochain jalon » est le premier jalon non atteint à venir, comme la prochaine échéance des chiffres clés : un
+    // jalon dépassé sans avoir été coché est dit en retard, à part, et un jalon sans date n'est jamais « prochain ».
+    const withMilestones = (list: Overview['projets']['milestones']) => ({ ...overview, projets: { ...overview.projets, milestones: list } })
+    const unreached = overview.projets.milestones.map((m) => ({ ...m, reached: false }))
+    const late = live(withMilestones(unreached), 'milestones')
+    assert.equal(late.auto_text, 'Prochain jalon : « Comité de pilotage », le 26 novembre 2026. 1 jalon en retard : « Cadrage validé », prévu le 3 octobre 2026. Aucun jalon atteint sur 3.')
+    // Le jour même, le jalon du 26 novembre est encore le prochain ; le lendemain, il est en retard à son tour.
+    assert.match(live(withMilestones(unreached), 'milestones', {}, '2026-11-26').auto_text, /^Prochain jalon : « Comité de pilotage », le 26 novembre 2026\. 1 jalon en retard/)
+    assert.equal(
+      live(withMilestones(unreached), 'milestones', {}, '2026-11-27').auto_text,
+      'Prochain jalon : « Mise en production », le 15 décembre 2026. 2 jalons en retard : « Cadrage validé », prévu le 3 octobre 2026, et 1 autre. Aucun jalon atteint sur 3.',
+    )
+    assert.equal(live(withMilestones(unreached), 'milestones', {}, '2027-01-04').auto_text, '3 jalons en retard : « Cadrage validé », prévu le 3 octobre 2026, et 2 autres. Aucun jalon atteint sur 3.')
+    const noDate = { id: 'm0', name: 'Sans date', date: null, reached: false }
+    const undated = live(withMilestones([noDate, ...overview.projets.milestones]), 'milestones')
+    assert.equal(undated.auto_text, 'Prochain jalon : « Comité de pilotage », le 26 novembre 2026. 1 jalon atteint sur 4.')
+    assert.equal(undated.rows[0]!.label, 'Sans date')
+    assert.equal(live(withMilestones([noDate]), 'milestones').auto_text, 'Aucun jalon atteint sur 1.')
   })
 
   it('liste : six lignes au plus, le reste compté ; liste vide dite', async () => {
@@ -386,7 +428,7 @@ describe('partie vivante d’une diapositive', () => {
     const overview = await kpiOverview()
     const presentation = { id: 3, project_id: overview.project.id, title: TITLE, slides: 2, created_at: '2026-11-10T08:00:00.000Z', updated_at: '2026-11-10T08:00:00.000Z' }
     const records = [record('title', { id: 1, position: 0 }), record('kpis', { id: 2, position: 1, title: 'Où en est-on ?', body: 'Le budget tient.', text_source: 'manual' })]
-    const deck = resolveDeck(presentation, records, overview)
+    const deck = resolveDeck(presentation, records, overview, TODAY)
     assert.deepEqual([deck.presentation, deck.project, deck.generated_at], [presentation, overview.project, overview.generated_at])
     assert.deepEqual(deck.slides.map((s) => [s.id, s.kind, s.title, s.body, s.stale]), [
       [1, 'title', null, null, []],
