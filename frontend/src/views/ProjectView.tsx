@@ -556,7 +556,14 @@ export function ProjectView({ overview, today, actions, refreshing }: { overview
     <div className="project">
       <header className="project__head">
         <div className="project__titles">
-          <h1 className="project__name">{p.name}</h1>
+          <h1 className="project__name">
+            {p.name}
+            {p.example && (
+              <span className="tag project__example" title="Fiche d’une histoire des « Exemples de la suite » (données fictives). La supprimer ne retire rien des apps.">
+                Exemple
+              </span>
+            )}
+          </h1>
           {p.description && <p className="project__desc">{p.description}</p>}
         </div>
         <div className="project__actions">
