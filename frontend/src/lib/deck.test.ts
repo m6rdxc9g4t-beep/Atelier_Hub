@@ -3,7 +3,24 @@ import { describe, it } from 'node:test'
 
 import { readFileSync } from 'node:fs'
 
-import { applyOrder, applyRecord, defaultTitle, elementChoices, KIND_CHOICES, longDay, moreText, moveIds, presentationMeta, provenance, shownText, shownTitle, withoutSlide } from './deck.ts'
+import {
+  applyOrder,
+  applyRecord,
+  defaultTitle,
+  elementChoices,
+  KIND_CHOICES,
+  longDay,
+  moreText,
+  moveIds,
+  presentationMeta,
+  provenance,
+  shownText,
+  isLongTitle,
+  LONG_TITLE,
+  shownTitle,
+  SLIDE_TITLE_MAX,
+  withoutSlide,
+} from './deck.ts'
 import { SLIDE_KINDS, type Deck, type DeckSlide, type Overview, type SlideLive, type SlideRecord } from './types.ts'
 
 const live = (more: Partial<SlideLive> = {}): SlideLive => ({
@@ -44,6 +61,15 @@ describe('présentations', () => {
     assert.equal(defaultTitle('Clôture', '2027-01-02'), 'Clôture — janvier 2027')
     assert.equal(defaultTitle('Clôture', '2026-08-31'), 'Clôture — août 2026')
     assert.equal(defaultTitle('Clôture', 'pas une date'), 'Clôture')
+    // Un long nom de fiche est abrégé pour que le titre tienne dans la borne du Hub : le mois reste lisible.
+    assert.equal(defaultTitle('KPI CGO', '2026-11-10', SLIDE_TITLE_MAX), 'KPI CGO — novembre 2026')
+    assert.equal(defaultTitle('Contrôle de gestion', '2026-11-10', 30), 'Contrôle de g… — novembre 2026')
+    const long = defaultTitle('x'.repeat(120), '2026-11-10', 120)
+    assert.equal(long.length, 120)
+    assert.match(long, /x… — novembre 2026$/)
+    // La même règle que le Hub (`defaultTitle` de backend/src/domain/plan.ts), qui pose ce titre quand il est laissé vide.
+    const hub = readFileSync(new URL('../../../backend/src/domain/plan.ts', import.meta.url), 'utf8')
+    assert.match(hub, /projectName\.slice\(0, room - 1\)\.trimEnd\(\)\}…/)
   })
 
   it('résume une présentation dans la liste', () => {
@@ -159,6 +185,13 @@ describe('présentations', () => {
     const ids = [1, 2, 3]
     moveIds(ids, 1, 1)
     assert.deepEqual(ids, [1, 2, 3])
+  })
+
+  it('reconnaît un long titre, que la diapositive de titre écrit moins grand', () => {
+    assert.equal(isLongTitle('KPI CGO — novembre 2026'), false)
+    assert.equal(isLongTitle('x'.repeat(LONG_TITLE)), false)
+    assert.equal(isLongTitle('x'.repeat(LONG_TITLE + 1)), true)
+    assert.equal(isLongTitle('x'.repeat(SLIDE_TITLE_MAX)), true)
   })
 
   it('dit d’où vient le texte, et de quand', () => {

@@ -26,7 +26,7 @@ export function NewPresentationDialog({
   onClose: () => void
   onCreated: (presentation: PresentationSummary) => void
 }) {
-  const [title, setTitle] = useState(() => defaultTitle(project.name, today).slice(0, TITLE_MAX))
+  const [title, setTitle] = useState(() => defaultTitle(project.name, today, TITLE_MAX))
   const [plan, setPlan] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

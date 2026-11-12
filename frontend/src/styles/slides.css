@@ -327,6 +327,11 @@
   font-size: 0.66em;
   color: var(--app-muted);
 }
+/* « Chiffres lus le … » (diapositive de titre) reste sur une ligne : c'est le nom de la fiche, à droite, qui s'abrège. */
+.slide__foot > span:not(.slide__where) {
+  flex: none;
+  white-space: nowrap;
+}
 .slide__open {
   display: inline-flex;
   align-items: center;
@@ -364,10 +369,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Diapositive de titre : le titre en grand, le texte en sous-titre. */
+/* Diapositive de titre : le titre en grand, le texte en sous-titre, centrés. Le pied est posé en bas, hors du flux
+   (il ne décentre pas le bloc) : sa hauteur est réservée en haut comme en bas, pour qu'un long texte s'arrête
+   au-dessus de lui au lieu de passer dessous. */
 .slide[data-kind="title"] .slide__inner {
   justify-content: center;
   gap: 1.4em;
+  padding-block: calc(3.6cqh + 2em);
 }
 .slide[data-kind="title"] .slide__body {
   flex: 0 1 auto;
@@ -376,6 +384,11 @@
   font-size: 2.7em;
   line-height: 1.08;
   letter-spacing: -0.022em;
+}
+/* Un long titre (jusqu'à 120 caractères) prendrait toute la diapositive : il laisse sa place au sous-titre. */
+.slide[data-kind="title"][data-long-title] .slide__title {
+  font-size: 2em;
+  line-height: 1.12;
 }
 .slide[data-kind="title"] .slide-text {
   max-width: 34em;
@@ -417,7 +430,7 @@
   }
   .deck .slide[data-kind="title"] .slide__inner {
     gap: 12px;
-    padding-top: 28px;
+    padding-block: 28px 12px;
   }
   .deck .slide[data-kind="title"] .slide__title {
     font-size: 24px;
@@ -744,6 +757,9 @@ dialog.presenter::backdrop {
   }
   .presenter .slide[data-kind="title"] .slide-text {
     font-size: 1em;
+  }
+  .presenter .slide[data-kind="title"] .slide__inner {
+    padding-block: 7cqw 4cqw;
   }
   .presenter .slide[data-kind="title"] .slide__foot {
     position: static;

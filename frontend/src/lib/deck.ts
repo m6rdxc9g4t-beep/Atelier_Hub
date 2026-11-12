@@ -8,12 +8,15 @@ const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet'
 
 /**
  * Titre proposé pour une nouvelle présentation : « KPI CGO — novembre 2026 ». Le même que celui que le Hub pose quand
- * le titre est laissé vide (`defaultTitle` de `backend/src/domain/plan.ts`).
+ * le titre est laissé vide (`defaultTitle` de `backend/src/domain/plan.ts`) : avec `max`, c'est le nom de la fiche
+ * qui est abrégé (« … ») pour que le titre tienne, le mois reste lisible.
  */
-export function defaultTitle(projectName: string, today: string): string {
+export function defaultTitle(projectName: string, today: string, max = Infinity): string {
   const [year, month] = today.split('-').map(Number)
   const name = MONTHS[(month ?? 0) - 1]
-  return name && year ? `${projectName} — ${name} ${year}` : projectName
+  const tail = name && year ? ` — ${name} ${year}` : ''
+  const room = Math.max(1, max - tail.length)
+  return `${projectName.length > room ? `${projectName.slice(0, room - 1).trimEnd()}…` : projectName}${tail}`
 }
 
 /** « 9 diapositives · modifiée hier », « 1 diapositive · modifiée le 9 nov. » */
@@ -39,6 +42,14 @@ export function moreText(more: number): string {
 /** Titre affiché : celui que tu as écrit, sinon le titre automatique (relu dans les apps). */
 export function shownTitle(slide: Pick<DeckSlide, 'title' | 'live'>): string {
   return slide.title ?? slide.live.auto_title
+}
+
+/** Au-delà, le grand titre de la diapositive de titre prend une taille en dessous (il occuperait toute la diapositive). */
+export const LONG_TITLE = 70
+
+/** Un titre long (une présentation en admet 120 caractères) : la diapositive de titre l'écrit moins grand. */
+export function isLongTitle(title: string): boolean {
+  return title.length > LONG_TITLE
 }
 
 /** Texte affiché : celui qui a été rédigé, sinon la phrase automatique (calculée sur les chiffres du jour). */

@@ -5,7 +5,7 @@
 import { ArrowUpRight } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { longDay, moreText, shownText, shownTitle } from '../lib/deck.ts'
+import { isLongTitle, longDay, moreText, shownText, shownTitle } from '../lib/deck.ts'
 import { shortDate, STATUS_LABELS, STATUS_VARS } from '../lib/format.ts'
 import { parseSlideText } from '../lib/slide-text.ts'
 import { appName } from '../lib/suite.ts'
@@ -78,7 +78,14 @@ export function Slide({
     )
 
   return (
-    <section className="slide" aria-roledescription="diapositive" aria-labelledby={titleId} data-kind={slide.kind} data-state={live.state}>
+    <section
+      className="slide"
+      aria-roledescription="diapositive"
+      aria-labelledby={titleId}
+      data-kind={slide.kind}
+      data-state={live.state}
+      data-long-title={slide.kind === 'title' && isLongTitle(title) ? '' : undefined}
+    >
       <div className="slide__inner">
         <header className="slide__head">
           {live.app && <AppTile id={live.app} small={false} />}
