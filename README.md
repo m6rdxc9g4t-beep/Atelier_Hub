@@ -57,10 +57,24 @@ Depuis une fiche, « Présentations » ouvre ses présentations : des diapositiv
 | | Ce que c'est | Où ça vit | Fraîcheur |
 |---|---|---|---|
 | **Structure** | quelles diapositives, dans quel ordre, de quelle sorte, visant quel élément | base du Hub (`presentations`, `slides`) | contenu du Hub |
-| **Texte rédigé** | le titre et le texte que tu as écrits | base du Hub (`slides.title`, `slides.body`), avec sa provenance et sa date | **daté**, jamais mis à jour tout seul |
+| **Texte rédigé** | le titre et le texte que tu as écrits, le texte écrit par une IA | base du Hub (`slides.title`, `slides.body`), avec sa provenance (toi, Ollama ou Claude, et le modèle) et sa date | **daté**, jamais mis à jour tout seul |
 | **Chiffres vivants** | cartes de chiffres, listes, états, liens, titre automatique, phrase automatique | **nulle part** : calculés à chaque lecture, les apps sont relues | toujours du jour |
 
 Une diapositive **référence, elle ne copie pas** : elle garde sa sorte et, si elle vise un élément, son identifiant dans son app et son libellé au moment du choix (affiché si l'app ne répond pas, comme pour un élément épinglé). Aucun chiffre, aucune ligne, aucun extrait n'entre dans la base. Un titre ou un texte laissé vide est **automatique** : relu et recalculé à chaque ouverture, donc toujours juste. Ce que tu écris, lui, reste tel quel : l'éditeur le rappelle sous le champ (« Ton texte, modifié le 12 nov. »). Si un élément visé n'est plus dans la fiche, sa diapositive le dit au lieu de montrer un ancien chiffre.
+
+### Rédiger avec l'IA
+
+Une présentation est complète et juste sans IA : chaque diapositive a sa phrase automatique. « Rédiger avec l'IA » (en-tête d'une présentation, ou sous une diapositive en mode « Modifier ») la remplace par un commentaire écrit par un modèle ; « Créer et rédiger avec l'IA », dans « Nouvelle présentation », crée le plan puis ouvre la même fenêtre. L'IA n'écrit que le **texte** des diapositives : ni titres, ni choix ou ordre des diapositives, ni chiffres affichés.
+
+- **Moteur : Auto · Ollama · Claude.** Ollama (local) est le moteur par défaut : avec lui, rien ne quitte la machine qui héberge le Hub (son adresse est imposée en bouclage). Claude n'est proposé qu'en mode **« En ligne »** ; « Auto » retient Claude si le Hub est en ligne et Claude disponible, sinon Ollama. Le choix et le modèle sont mémorisés par navigateur (`localStorage["atelier-hub:ia"]`). L'interface demande toujours au Hub le moteur qu'elle vient d'annoncer, jamais « auto » : si l'état a changé entre-temps, le Hub refuse avec sa raison au lieu de répondre par un autre moteur.
+- **Hors ligne / En ligne** (interrupteur de la barre haute) : **hors ligne par défaut**. Hors ligne, rien ne part vers Claude : son choix est grisé avec l'explication, une demande explicite est refusée (403), son état n'est même pas demandé. Seul toi changes le mode, depuis cette machine ou un hôte déclaré (`ALLOWED_HOSTS`) ; le mode est gardé dans la base du Hub. Dans cette version, le moteur Claude n'est pas encore branché : en ligne, il reste grisé (« Claude n'est pas installé sur cette machine »).
+- **Ce qui part** (ligne bouclier, sous le choix du moteur) : seulement ce que montrent les diapositives à rédiger — le nom et la description de la fiche, ses chiffres clés, le titre de chaque diapositive, et pour chaque sorte ce qu'elle affiche (noms, statuts, heures et échéances des features ; noms et dates des jalons ; noms, tailles et dates des rapports, tables et conversions ; noms des agents ; noms et sortes des sources) — plus les consignes que tu écris. **Jamais** : une adresse, un chemin, une note de source, un identifiant, le contenu d'une table ou d'un rapport, ni le contenu d'une page du Wiki (du Wiki, les **titres** et les dates seulement ; la diapositive d'une page n'est pas rédigée). 12 000 caractères au plus par appel (`HUB_AI_MAX_CHARS`), 3 000 vers Ollama.
+- **Ce qui est rédigé** : une diapositive vivante dont l'app répond. Gardent leur texte : un texte libre (pas de données à commenter), une diapositive dont l'app ne répond pas, et **tes textes**, sauf si tu coches « Réécrire aussi mes textes ».
+- **Progression et arrêt** : une diapositive par requête avec Ollama (« Diapositive 3 sur 9 · 42 s »), douze avec Claude. « Arrêter » abandonne la requête en cours (le Hub interrompt l'appel au modèle) ; ce qui est déjà rédigé reste. Une requête qui échoue (Ollama arrêté, modèle absent, délai) arrête la suite et le dit dans la fenêtre.
+- **Vérification des nombres** : chaque nombre d'une réponse doit figurer dans les faits de sa diapositive ou dans les chiffres clés ; sinon le modèle est relancé une fois, puis le texte est **retiré** : la diapositive garde le sien, et la fenêtre liste ces diapositives avec la raison (« chiffre non vérifiable : 75 % », « réponse illisible »). Avec un petit modèle local, attends-toi à ce que plusieurs diapositives gardent leur phrase automatique.
+- **Provenance et « à relire »** : un texte d'IA est enregistré tout de suite, marqué sous lui (« Rédigé par Ollama (llama3.2:1b) le 12 nov. ») ; « Phrase automatique », en mode « Modifier », le retire d'un clic. À chaque lecture, ses nombres sont recomparés aux chiffres du jour : « Texte à relire : 63 % ne correspond plus aux chiffres du jour ». Ces deux notes ne paraissent ni en plein écran ni dans le PDF.
+
+**Ce que la vérification ne fait pas.** Elle refuse un nombre qui n'apparaît nulle part dans les faits de la diapositive ; elle ne sait pas si un nombre présent est attribué à la bonne chose (« 12 features » passe si « 12 h » figure dans les faits), ni lire un nombre écrit en lettres. Elle est stricte : une date écrite « 12/11 » ou un arrondi différent fait retirer un texte juste. « À relire » repose sur la même comparaison : il ne s'allume pas si l'ancien chiffre figure encore ailleurs sur la diapositive. C'est une aide, pas une garantie : la diapositive montre toujours les chiffres vivants à côté du texte, relis ce que l'IA a écrit.
 
 ## Lancer en local
 
@@ -76,7 +90,7 @@ npm run build
 npm start          # http://127.0.0.1:3700
 ```
 
-Aperçu sans la suite (données d'exemple « KPI CGO » et fiche de l'histoire « Studio Garance », lecture seule : « Exemples de la suite » s'y consulte, « Créer la fiche » y est inactif) :
+Aperçu sans la suite (données d'exemple « KPI CGO » et fiche de l'histoire « Studio Garance », lecture seule, figé au 10 novembre 2026 : « Exemples de la suite » s'y consulte, « Créer la fiche » y est inactif ; l'IA y est désactivée, mais la présentation de « KPI CGO » y porte trois textes rédigés par le faux Ollama des tests, dont un « à relire ») :
 
 ```bash
 cd backend && npx tsx scripts/demo-snapshot.ts && cd ..   # régénère frontend/src/demo/snapshot.json
@@ -173,7 +187,9 @@ backend/   Fastify + TypeScript + SQLite (better-sqlite3)
   src/domain/      règles pures : mots-clés, synthèse Projets, classement des agents, liens profonds, exemples,
                    diapositives (slides.ts : partie vivante de chaque sorte ; plan.ts : plan proposé)
   src/services/    fiches et épinglés, vue d'ensemble, catalogue « Lier », exemples de la suite,
-                   présentations (presentations.ts : seul à écrire ; decks.ts : lecture résolue)
+                   présentations (presentations.ts : seul à écrire ; decks.ts : lecture résolue),
+                   rédaction par une IA (writing.ts, ai.ts, settings.ts : mode en ligne)
+  src/ai/          seul dossier qui parle à un moteur (ollama.ts, claude.ts) ; consignes et contrôle d'une réponse
   test/fixtures/   double de la suite (aussi utilisé pour l'aperçu)
 frontend/  React + TypeScript + Vite, CSS natif
   src/views/ProjectView.tsx   la fiche et ses panneaux
@@ -181,5 +197,8 @@ frontend/  React + TypeScript + Vite, CSS natif
   src/views/PresentationsView.tsx, DeckView.tsx   présentations d'une fiche, lecture et édition d'une présentation
   src/components/Slide.tsx, Presenter.tsx, SlideEditor.tsx   la diapositive, le plein écran, l'éditeur
                               (règles : src/lib/deck.ts, presenter.ts, print.ts ; styles : src/styles/slides.css)
+  src/components/WriteDialog.tsx, EnginePicker.tsx, OnlineSwitch.tsx   « Rédiger avec l'IA », le choix du moteur et
+                              la ligne bouclier, l'interrupteur « Hors ligne / En ligne »
+                              (règles : src/lib/engine.ts, writing.ts ; état des moteurs : src/lib/ai-status.ts)
   src/lib/                    API, aperçu, frise, mise en forme, routeur
 ```
