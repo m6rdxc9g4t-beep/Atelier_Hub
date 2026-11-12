@@ -1,6 +1,7 @@
 // Présentations : ce que l'interface en dit. Règles pures, testées. Aucun calcul sur les données des apps ici :
 // la partie vivante d'une diapositive (`live`) arrive résolue du backend.
 
+import type { SlidePatch } from './api.ts'
 import { plural, relativeDay, shortDate } from './format.ts'
 import type { Deck, DeckSlide, Overview, PresentationSummary, SlideKind, SlideRecord } from './types.ts'
 
@@ -102,6 +103,73 @@ export function moveIds(ids: readonly number[], id: number, direction: -1 | 1): 
   next[from] = ids[to]!
   next[to] = id
   return next
+}
+
+// ─── Saisie en attente ───────────────────────────────────────────
+// Le titre et le texte d'une diapositive s'enregistrent à la sortie du champ. Entre la frappe et la réponse du Hub,
+// ce que le champ contient (la saisie) et ce que le Hub garde (l'enregistré) diffèrent : ces règles disent ce qui
+// reste à enregistrer, et quand l'enregistré peut remplacer la saisie sans rien effacer de ce qui vient d'être tapé.
+
+export type SlideField = 'title' | 'body'
+export const SLIDE_FIELDS: readonly SlideField[] = ['title', 'body']
+
+/** Ce que contiennent les champs « Titre » et « Texte ». */
+export type SlideDraft = Record<SlideField, string>
+/** Ce que le Hub garde (null : titre ou phrase automatique). */
+export type SlideSaved = Pick<SlideRecord, SlideField>
+
+/** Valeur qu'une saisie enregistrerait : sans espaces de bord, et null si elle est vide (retour à l'automatique). */
+export function draftValue(input: string): string | null {
+  return input.trim() || null
+}
+
+/**
+ * Ce qui reste à enregistrer : les champs dont la saisie diffère de l'enregistré, y compris un champ dont
+ * l'enregistrement a échoué plus tôt (il n'est « enregistré » que quand le Hub l'a). `sending` : valeurs déjà parties
+ * et sans réponse, à ne pas renvoyer. null s'il ne reste rien.
+ */
+export function unsavedPatch(draft: SlideDraft, saved: SlideSaved, sending: SlidePatch = {}): SlidePatch | null {
+  const patch: SlidePatch = {}
+  for (const field of SLIDE_FIELDS) {
+    const value = draftValue(draft[field])
+    if (value === saved[field]) continue
+    if (field in sending && sending[field] === value) continue
+    patch[field] = value
+  }
+  return Object.keys(patch).length > 0 ? patch : null
+}
+
+/** Champs dont la saisie n'est pas (encore) dans le Hub. */
+export function unsavedFields(draft: SlideDraft, saved: SlideSaved): SlideField[] {
+  return SLIDE_FIELDS.filter((field) => draftValue(draft[field]) !== saved[field])
+}
+
+/**
+ * Contenu d'un champ quand l'enregistré passe de `before` à `after` (réponse d'un enregistrement, où `before` est la
+ * valeur envoyée ; retour à l'automatique ; actualisation). L'enregistré ne remplace la saisie que si elle n'a pas
+ * bougé depuis : ce qui a été tapé pendant qu'une réponse était en route, ou une saisie dont l'enregistrement a
+ * échoué, reste dans le champ.
+ */
+export function syncedDraft(draft: string, before: string | null, after: string | null): string {
+  const value = draftValue(draft)
+  // Déjà ce que le Hub garde, aux espaces de bord près : le champ n'est pas touché (une espace tapée y reste).
+  if (value === after) return draft
+  return value === before ? (after ?? '') : draft
+}
+
+const FIELD_NAMES: Record<SlideField, string> = { title: 'Le titre', body: 'Le texte' }
+
+/**
+ * Ce que dit l'éditeur des champs dont l'enregistrement a échoué (`failed` : la raison donnée par le Hub, par champ)
+ * et qui restent à enregistrer (`unsaved`). Vide dès qu'il n'en reste aucun : un champ en échec n'est jamais annoncé
+ * « enregistré » parce qu'un autre l'a été.
+ */
+export function unsavedNotice(failed: Partial<Record<SlideField, string>>, unsaved: readonly SlideField[]): string {
+  const fields = SLIDE_FIELDS.filter((field) => unsaved.includes(field) && failed[field] !== undefined)
+  // Les refus du Hub (« Titre : 120 caractères au plus ») n'ont pas de point final, ses pannes en ont un.
+  const reason = (field: SlideField) => (failed[field] ?? '').replace(/([^.!?…])$/, '$1.')
+  if (fields.length === 2 && failed.title === failed.body) return `Le titre et le texte n’ont pas été enregistrés : ${reason('title')}`
+  return fields.map((field) => `${FIELD_NAMES[field]} n’a pas été enregistré : ${reason(field)}`).join(' ')
 }
 
 const ENGINE_NAMES = { ollama: 'Ollama', claude: 'Claude' } as const

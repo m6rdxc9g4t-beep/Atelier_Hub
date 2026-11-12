@@ -7,6 +7,7 @@ import {
   applyOrder,
   applyRecord,
   defaultTitle,
+  draftValue,
   elementChoices,
   KIND_CHOICES,
   longDay,
@@ -19,6 +20,10 @@ import {
   LONG_TITLE,
   shownTitle,
   SLIDE_TITLE_MAX,
+  syncedDraft,
+  unsavedFields,
+  unsavedNotice,
+  unsavedPatch,
   withoutSlide,
 } from './deck.ts'
 import { SLIDE_KINDS, type Deck, type DeckSlide, type Overview, type SlideLive, type SlideRecord } from './types.ts'
@@ -192,6 +197,66 @@ describe('présentations', () => {
     assert.equal(isLongTitle('x'.repeat(LONG_TITLE)), false)
     assert.equal(isLongTitle('x'.repeat(LONG_TITLE + 1)), true)
     assert.equal(isLongTitle('x'.repeat(SLIDE_TITLE_MAX)), true)
+  })
+
+  it('sait ce qui reste à enregistrer', () => {
+    const saved = { title: null, body: 'Le budget tient.' }
+    assert.equal(draftValue('  Mon titre '), 'Mon titre')
+    assert.equal(draftValue('   '), null)
+    // Rien de tapé : rien à enregistrer (les espaces de bord ne comptent pas).
+    assert.equal(unsavedPatch({ title: '', body: 'Le budget tient. ' }, saved), null)
+    assert.deepEqual(unsavedFields({ title: ' ', body: 'Le budget tient.' }, saved), [])
+    // Un champ modifié ; un champ vidé revient à l'automatique (null).
+    assert.deepEqual(unsavedPatch({ title: ' Où en est-on ? ', body: 'Le budget tient.' }, saved), { title: 'Où en est-on ?' })
+    assert.deepEqual(unsavedPatch({ title: '', body: '  ' }, saved), { body: null })
+    // Le texte dont l'enregistrement a échoué reste à enregistrer : il part avec le titre qu'on modifie ensuite.
+    const afterFailure = { title: 'Nouveau titre', body: 'Texte tapé pendant la coupure.' }
+    assert.deepEqual(unsavedPatch(afterFailure, saved), { title: 'Nouveau titre', body: 'Texte tapé pendant la coupure.' })
+    assert.deepEqual(unsavedFields(afterFailure, saved), ['title', 'body'])
+    // Le titre enregistré, le texte attend toujours : il n'est pas « enregistré » parce qu'un autre champ l'a été.
+    assert.deepEqual(unsavedFields(afterFailure, { ...saved, title: 'Nouveau titre' }), ['body'])
+    assert.deepEqual(unsavedPatch(afterFailure, { ...saved, title: 'Nouveau titre' }), { body: 'Texte tapé pendant la coupure.' })
+    // Une valeur déjà partie et sans réponse n'est pas renvoyée ; ce qui a été tapé depuis, si.
+    assert.equal(unsavedPatch({ title: '', body: 'abc' }, saved, { body: 'abc' }), null)
+    assert.deepEqual(unsavedPatch({ title: '', body: 'abc def' }, saved, { body: 'abc' }), { body: 'abc def' })
+    assert.deepEqual(unsavedPatch({ title: 'T', body: '' }, { title: 'T', body: null }, { body: null }), null)
+    assert.deepEqual(unsavedPatch({ title: '', body: 'abc' }, { title: 'T', body: 'abc' }, { body: null }), { title: null })
+  })
+
+  it('ne remplace une saisie par l’enregistré que si elle n’a pas bougé', () => {
+    // Réponse d'un enregistrement (envoyé « abc ») alors qu'on a continué à taper : la saisie reste.
+    assert.equal(syncedDraft('abc def', 'abc', 'abc'), 'abc def')
+    assert.equal(syncedDraft('abc def', null, 'abc'), 'abc def')
+    // La saisie est ce que le Hub garde, aux espaces de bord près : le champ n'est pas touché (une espace tapée y reste).
+    assert.equal(syncedDraft('abc ', 'abc', 'abc'), 'abc ')
+    assert.equal(syncedDraft('abc', null, 'abc'), 'abc')
+    // Le Hub a nettoyé la valeur envoyée et la saisie n'a pas bougé : elle prend la valeur gardée.
+    assert.equal(syncedDraft('a  b', 'a  b', 'a b'), 'a b')
+    // Champ intact quand l'enregistré change ailleurs (actualisation, retour à l'automatique) : il suit.
+    assert.equal(syncedDraft('Ancien', 'Ancien', 'Nouveau'), 'Nouveau')
+    assert.equal(syncedDraft(' Ancien ', 'Ancien', null), '')
+    assert.equal(syncedDraft('', null, 'Écrit ailleurs'), 'Écrit ailleurs')
+    // Une saisie en échec (différente de l'ancien enregistré) reste dans le champ quoi qu'il arrive à l'enregistré.
+    assert.equal(syncedDraft('Texte tapé pendant la coupure.', null, null), 'Texte tapé pendant la coupure.')
+    assert.equal(syncedDraft('Texte tapé pendant la coupure.', 'Ancien', 'Nouveau'), 'Texte tapé pendant la coupure.')
+  })
+
+  it('annonce un champ en échec tant qu’il attend, jamais après', () => {
+    const down = 'Le Hub ne répond pas.'
+    assert.equal(unsavedNotice({ body: down }, ['body']), 'Le texte n’a pas été enregistré : Le Hub ne répond pas.')
+    assert.equal(unsavedNotice({ title: down }, ['title']), 'Le titre n’a pas été enregistré : Le Hub ne répond pas.')
+    // Le titre vient d'être enregistré, le texte en échec attend encore : son message reste.
+    assert.equal(unsavedNotice({ body: down }, ['body']), unsavedNotice({ title: down, body: down }, ['body']))
+    assert.equal(unsavedNotice({ title: down, body: down }, ['title', 'body']), 'Le titre et le texte n’ont pas été enregistrés : Le Hub ne répond pas.')
+    assert.equal(
+      unsavedNotice({ title: 'Titre : 120 caractères au plus', body: down }, ['title', 'body']),
+      'Le titre n’a pas été enregistré : Titre : 120 caractères au plus. Le texte n’a pas été enregistré : Le Hub ne répond pas.',
+    )
+    // Plus rien à enregistrer (le champ a été retenté avec succès, ou remis à ce que le Hub garde) : plus de message.
+    assert.equal(unsavedNotice({ body: down }, []), '')
+    // Une saisie en cours, sans échec, n'est pas une erreur.
+    assert.equal(unsavedNotice({}, ['title', 'body']), '')
+    assert.equal(unsavedNotice({ title: down }, ['body']), '')
   })
 
   it('dit d’où vient le texte, et de quand', () => {

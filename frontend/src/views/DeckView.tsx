@@ -7,7 +7,7 @@ import { AddSlideDialog } from '../components/PresentationDialogs.tsx'
 import { Presenter } from '../components/Presenter.tsx'
 import { ReadError, ReadMissing } from '../components/ReadState.tsx'
 import { Slide } from '../components/Slide.tsx'
-import { SlideEditor } from '../components/SlideEditor.tsx'
+import { SlideEditor, type SlideEditorHandle } from '../components/SlideEditor.tsx'
 import { useUi } from '../components/ui.tsx'
 import { ApiError } from '../lib/api.ts'
 import { applyOrder, applyRecord, moveIds, shownTitle, withoutSlide } from '../lib/deck.ts'
@@ -45,7 +45,7 @@ function DeckItem({
   onSaved,
   onMove,
   onRemove,
-  track,
+  register,
 }: {
   slide: DeckSlide
   index: number
@@ -56,7 +56,7 @@ function DeckItem({
   onSaved: (record: SlideRecord) => void
   onMove: (slide: DeckSlide, direction: -1 | 1) => void
   onRemove: (slide: DeckSlide, index: number) => void
-  track: (saving: Promise<unknown>) => void
+  register: (slideId: number, handle: SlideEditorHandle | null) => void
 }) {
   const item = useRef<HTMLLIElement>(null)
   const [overflowing, setOverflowing] = useState(false)
@@ -85,7 +85,7 @@ function DeckItem({
           onSaved={onSaved}
           onMove={(direction) => onMove(slide, direction)}
           onRemove={() => onRemove(slide, index)}
-          track={track}
+          register={register}
         />
       )}
     </li>
@@ -123,7 +123,8 @@ export function DeckView({
   const [adding, setAdding] = useState(false)
   /** Déplacement annoncé au lecteur d'écran (« Diapositive déplacée en position 2 »). */
   const [announcement, setAnnouncement] = useState('')
-  const pending = useRef(new Set<Promise<unknown>>())
+  /** Éditeurs à l'écran (mode « Modifier »), par diapositive. */
+  const editors = useRef(new Map<number, SlideEditorHandle>())
   const moving = useRef(false)
   const focusAfter = useRef<{ id: number | null; action: EditorAction } | null>(null)
   const addButton = useRef<HTMLButtonElement>(null)
@@ -217,18 +218,36 @@ export function DeckView({
   }
   const closePresenter = useCallback(() => setPresenting(false), [])
 
-  const track = useCallback((saving: Promise<unknown>) => {
-    pending.current.add(saving)
-    const done = () => pending.current.delete(saving)
-    saving.then(done, done)
+  const register = useCallback((slideId: number, handle: SlideEditorHandle | null) => {
+    if (handle) editors.current.set(slideId, handle)
+    else editors.current.delete(slideId)
   }, [])
 
-  const exportPdf = async () => {
-    // Le champ en cours est d'abord enregistré, et la page l'affiche avant d'être imprimée.
+  /**
+   * Enregistre ce qui attend dans les éditeurs (la saisie du champ en cours, un champ dont l'enregistrement a échoué)
+   * et attend les réponses. Faux s'il reste une saisie que le Hub n'a pas : elle reste dans son champ, avec son message.
+   */
+  const saveEdits = async (): Promise<boolean> => {
     const active = document.activeElement
     if (active instanceof HTMLElement && active.closest('.slide-editor')) active.blur()
-    if (pending.current.size > 0) {
-      await Promise.allSettled([...pending.current])
+    const done = await Promise.all([...editors.current.values()].map((editor) => editor.flush()))
+    return done.every(Boolean)
+  }
+
+  /** Une saisie n'a pas pu être enregistrée : on le dit, et son éditeur (qui porte la raison) vient à l'écran. */
+  const showUnsaved = (text: string) => {
+    toast(text, 'danger')
+    requestAnimationFrame(() => document.querySelector('.slide-editor[data-unsaved]')?.scrollIntoView({ block: 'center' }))
+  }
+
+  const exportPdf = async () => {
+    // Ce qui est tapé est d'abord enregistré, et la page l'affiche avant d'être imprimée : le PDF montre les
+    // diapositives, pas les champs.
+    if (editors.current.size > 0) {
+      if (!(await saveEdits())) {
+        showUnsaved('Le PDF n’a pas été préparé : une saisie n’est pas enregistrée, il ne la montrerait pas.')
+        return
+      }
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
     }
     if (print.current) printDeck(print.current, window)
@@ -236,8 +255,19 @@ export function DeckView({
 
   /** « Actualiser » : après les enregistrements en cours, sinon la relecture pourrait rendre le texte d'avant. */
   const refresh = async () => {
-    if (pending.current.size > 0) await Promise.allSettled([...pending.current])
+    await saveEdits()
     await load(true)
+  }
+
+  /** Quitter « Modifier » enregistre ce qui attend ; une saisie que le Hub n'a pas prise garde le mode ouvert. */
+  const toggleEditing = async () => {
+    setAnnouncement('')
+    if (!editing) {
+      setEditing(true)
+      return
+    }
+    if (await saveEdits()) setEditing(false)
+    else showUnsaved('Une saisie n’est pas enregistrée : le mode «\u00a0Modifier\u00a0» reste ouvert pour ne pas la perdre.')
   }
 
   const onSaved = useCallback((record: SlideRecord) => setDeck((current) => (current ? applyRecord(current, record) : current)), [])
@@ -279,6 +309,7 @@ export function DeckView({
       toast(`La diapositive n’a pas été supprimée : ${(error as Error).message}`, 'danger')
       return
     }
+    editors.current.get(slide.id)?.discard()
     // Son bouton disparaît avec elle : le focus va à la diapositive qui prend sa place, sinon à la précédente, sinon
     // au bouton d'ajout.
     setDeck((current) => {
@@ -370,10 +401,7 @@ export function DeckView({
             type="button"
             className="btn"
             aria-pressed={editing}
-            onClick={() => {
-              setEditing(!editing)
-              setAnnouncement('')
-            }}
+            onClick={() => void toggleEditing()}
             disabled={api.demo}
             title={api.demo ? READ_ONLY : undefined}
           >
@@ -411,7 +439,7 @@ export function DeckView({
               onSaved={onSaved}
               onMove={(moved, direction) => void move(moved, direction)}
               onRemove={(removed, at) => void remove(removed, at)}
-              track={track}
+              register={register}
             />
           ))}
         </ol>
