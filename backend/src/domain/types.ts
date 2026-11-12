@@ -230,3 +230,40 @@ export interface ExampleCatalog {
   message: string | null
   stories: ExampleStory[]
 }
+
+// ─── Présentations d'une fiche ────────────────────────────────────
+
+export type SlideKind = 'title' | 'summary' | 'kpis' | 'features' | 'active' | 'milestones' | 'wiki' | 'viz' | 'tab' | 'convert' | 'nexus' | 'sources' | 'text'
+export const SLIDE_KINDS: readonly SlideKind[] = ['title', 'summary', 'kpis', 'features', 'active', 'milestones', 'wiki', 'viz', 'tab', 'convert', 'nexus', 'sources', 'text']
+
+/** Provenance de `body` — auto : phrase automatique (body null) · manual : écrit à la main · ollama / claude : rédigé par ce moteur. */
+export type TextSource = 'auto' | 'manual' | 'ollama' | 'claude'
+
+export interface PresentationSummary {
+  id: number
+  project_id: number
+  title: string
+  /** Nombre de diapositives. */
+  slides: number
+  created_at: string
+  updated_at: string
+}
+
+/** Ce que le Hub enregistre d'une diapositive : structure et texte rédigé, jamais de donnée d'une autre app. */
+export interface SlideRecord {
+  id: number
+  presentation_id: number
+  position: number
+  kind: SlideKind
+  /** null : titre automatique (calculé à la lecture). */
+  title: string | null
+  /** null : phrase automatique (calculée à la lecture). */
+  body: string | null
+  /** Identifiant de l'élément visé dans son app (null : toute la liste), et son libellé au moment du choix. */
+  ref: string | null
+  ref_label: string | null
+  text_source: TextSource
+  text_model: string | null
+  text_at: string | null
+  updated_at: string
+}

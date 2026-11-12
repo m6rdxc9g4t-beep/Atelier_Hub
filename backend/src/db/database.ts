@@ -45,6 +45,34 @@ const MIGRATIONS: readonly string[] = [
   ALTER TABLE projects ADD COLUMN example TEXT;
   CREATE UNIQUE INDEX projects_example ON projects(example) WHERE example IS NOT NULL;
   `,
+  // 3 — présentations d'une fiche : structure et texte rédigé seulement (aucune donnée des autres apps)
+  `
+  CREATE TABLE presentations (
+    id          INTEGER PRIMARY KEY,
+    project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    title       TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+  );
+  CREATE INDEX presentations_project ON presentations(project_id, updated_at);
+
+  CREATE TABLE slides (
+    id               INTEGER PRIMARY KEY,
+    presentation_id  INTEGER NOT NULL REFERENCES presentations(id) ON DELETE CASCADE,
+    position         INTEGER NOT NULL,
+    kind             TEXT NOT NULL,
+    title            TEXT,                          -- NULL : titre automatique, calculé à la lecture
+    body             TEXT,                          -- NULL : phrase automatique, calculée à la lecture
+    ref              TEXT,                          -- identifiant de l'élément dans son app ; NULL : toute la liste
+    ref_label        TEXT,                          -- libellé au moment du choix (affiché si l'app ne répond pas)
+    text_source      TEXT NOT NULL DEFAULT 'auto',  -- provenance de body : auto | manual | ollama | claude
+    text_model       TEXT,
+    text_at          TEXT,
+    created_at       TEXT NOT NULL,
+    updated_at       TEXT NOT NULL
+  );
+  CREATE INDEX slides_presentation ON slides(presentation_id, position);
+  `,
 ]
 
 export function migrate(db: Db): void {
