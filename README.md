@@ -98,6 +98,10 @@ npm run build:demo                                         # frontend/dist-demo/
 | `CONVERT_API_URL` / `CONVERT_URL` | `http://127.0.0.1:8010` / idem | Atelier Convert |
 | `NEXUS_API_URL` / `NEXUS_URL` | `http://127.0.0.1:8100` / `http://127.0.0.1:3100` | Atelier Nexus |
 | `TAB_EXPORTS_DIR` / `TAB_URL` | `~/Atelier_Tab/exports` / `http://127.0.0.1:4175` | Atelier Tab (index `_atelier/index.json`, §7.3) |
+| `OLLAMA_URL` (sinon `OLLAMA_BASE_URL`) | `http://127.0.0.1:11434` | Ollama, pour la rédaction des présentations. **Sur cette machine seulement** : une autre adresse ne bloque pas le démarrage, elle désactive Ollama |
+| `OLLAMA_MODEL` | `llama3.1:8b` | Modèle d'Ollama par défaut |
+| `OLLAMA_TIMEOUT_MS` / `OLLAMA_NUM_CTX` | `120000` / `8192` | Délai d'un appel à Ollama ; fenêtre de contexte demandée |
+| `HUB_AI_MAX_CHARS` | `12000` | Taille maximale de ce qui part vers une IA en un appel (3 000 au plus vers Ollama) |
 
 Sur le VPS : les `*_API_URL` restent en bouclage, les `*_URL` deviennent les sous-domaines de la suite. Adresses du sélecteur « Suite Atelier » (compilées dans l'interface) : `VITE_ATELIER_*_URL`, comme dans les autres apps.
 
@@ -144,6 +148,9 @@ Tab (app de bureau) n'a pas d'adresse par table : le clic ouvre Tab. Toutes ces 
 | `POST /api/presentations/:pid/slides` | `{ kind, title?, body?, ref?, ref_label?, after? }` : ajoute une diapositive (40 au plus, 409 au-delà). `ref` seulement pour `wiki`, `viz`, `tab`, `convert`, `nexus`, avec `ref_label` |
 | `PATCH /api/presentations/:pid/slides/:sid` | `{ title?, body? }` : vide ou `null` = automatique ; un texte écrit devient `manual`, daté. La sorte et l'élément visé ne changent pas |
 | `DELETE /api/presentations/:pid/slides/:sid`, `PUT /api/presentations/:pid/order` | Supprimer une diapositive ; nouvel ordre `{ slide_ids }` (chaque diapositive une seule fois, 422 sinon) |
+| `POST /api/presentations/:pid/write` | `{ slide_ids (1 à 12), engine?: auto \| ollama \| claude, model?, claude_model?: sonnet \| opus \| haiku, instructions? (500 car.), overwrite_manual? }` : une IA rédige le texte (`body`) de ces diapositives à partir de ce qu'elles affichent. Chaque nombre de la réponse est vérifié contre ces faits (une relance, puis retrait). Réponse : `{ engine, model, written, kept: [{ slide_id, reason }], slides }`. `claude` hors ligne : 403 `CLAUDE_OFFLINE` ; moteur indisponible : 502 (`AI_UNAVAILABLE`, `AI_MODEL_MISSING`, `CLAUDE_UNAVAILABLE`, `AI_ERROR`), 504 `AI_TIMEOUT` |
+| `GET /api/ai/status?refresh=` | État des moteurs : mode en ligne, Ollama (joignable, modèles installés), Claude (jamais interrogé hors ligne), moteur que « Auto » retiendrait |
+| `PUT /api/settings/online-mode` | `{ online }` : seul moyen de passer « En ligne » (hors ligne par défaut ; hors ligne, rien ne part vers Claude) |
 | `GET /api/health` | `{ status: "ok", app: "atelier-hub" }` |
 
 Erreurs `{ detail, code }` en français. Gardes Host / Origin comme le Wiki (hôte inconnu ou écriture d'une autre origine → 403).
