@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { AUTOFOCUS, confirmFocus, focusOnOpen, isHeldEnter } from './dialogs.ts'
+import { AUTOFOCUS, confirmFocus, focusOnClose, focusOnOpen, isHeldEnter } from './dialogs.ts'
 
 /** Fenêtre réduite à ce que la règle lit : un sélecteur → un élément. */
 const dialog = (marked: string | null) => ({
@@ -57,5 +57,30 @@ describe('touche maintenue dans une fenêtre', () => {
   it('dans une zone de texte, l’Entrée maintenue reste un retour à la ligne', () => {
     assert.equal(isHeldEnter({ key: 'Enter', repeat: true }, 'TEXTAREA'), false)
     assert.equal(isHeldEnter({ key: 'Enter', repeat: true }, 'textarea'), false)
+  })
+})
+
+describe('focus à la fermeture d’une fenêtre', () => {
+  /** `take` d'essai : seuls les éléments visibles prennent le focus ; on note qui a été essayé. */
+  const taker = (visible: string[]) => {
+    const tried: string[] = []
+    return { tried, take: (el: string) => (tried.push(el), visible.includes(el)) }
+  }
+
+  it('revient au déclencheur quand il peut le prendre, sans essayer le repli', () => {
+    const t = taker(['entrée', 'menu'])
+    assert.equal(focusOnClose(['entrée', 'menu'], t.take), 'entrée')
+    assert.deepEqual(t.tried, ['entrée'])
+  })
+
+  it('déclencheur masqué (barre latérale repliée au téléphone) : le bouton du menu le reprend', () => {
+    const t = taker(['menu'])
+    assert.equal(focusOnClose(['entrée', 'menu'], t.take), 'menu')
+    assert.deepEqual(t.tried, ['entrée', 'menu'])
+  })
+
+  it('sans déclencheur ni repli utilisable, personne ne le prend', () => {
+    assert.equal(focusOnClose([null, undefined], () => true), null)
+    assert.equal(focusOnClose(['entrée', 'menu'], () => false), null)
   })
 })

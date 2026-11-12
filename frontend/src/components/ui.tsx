@@ -3,7 +3,7 @@
 import { CircleAlert, X } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 
-import { confirmFocus, focusOnOpen, isHeldEnter } from '../lib/dialogs.ts'
+import { confirmFocus, FOCUS_FALLBACK, focusOnClose, focusOnOpen, isHeldEnter } from '../lib/dialogs.ts'
 
 interface Toast {
   id: number
@@ -94,7 +94,8 @@ export function UiProvider({ children }: { children: ReactNode }) {
 
 /**
  * Fenêtre modale native (<dialog>) : Échap et clic sur le voile ferment. Le focus va à l'élément `data-autofocus`
- * (l'attribut `autoFocus` de React agit avant l'ouverture, donc sans effet) et revient au déclencheur à la fermeture.
+ * (l'attribut `autoFocus` de React agit avant l'ouverture, donc sans effet) et revient au déclencheur à la fermeture
+ * (au bouton du menu, `data-focus-fallback`, quand le déclencheur n'est plus à l'écran).
  * Règles (focus, touche maintenue) dans `lib/dialogs.ts`.
  */
 export function Modal({ title, onClose, children, width = 520, labelId }: { title: ReactNode; onClose: () => void; children: ReactNode; width?: number; labelId?: string }) {
@@ -112,7 +113,12 @@ export function Modal({ title, onClose, children, width = 520, labelId }: { titl
     // Pas au doigt : le clavier de l'écran s'ouvrirait par-dessus la fenêtre avant qu'on ait rien demandé.
     focusOnOpen<HTMLElement>(dialog, window.matchMedia('(pointer: coarse)').matches)?.focus()
     return () => {
-      if (opener.current?.isConnected) opener.current.focus()
+      // Le déclencheur, sinon le bouton du menu : au téléphone, une entrée de la barre latérale est repliée avec elle.
+      focusOnClose([opener.current, document.querySelector<HTMLElement>(FOCUS_FALLBACK)], (el) => {
+        if (!el.isConnected) return false
+        el.focus()
+        return document.activeElement === el
+      })
     }
   }, [])
   return (

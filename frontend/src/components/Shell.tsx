@@ -280,6 +280,7 @@ export function Topbar({ title, onToggleNav, navOpen, children }: { title: strin
         aria-label={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
         aria-expanded={navOpen}
         onClick={onToggleNav}
+        data-focus-fallback=""
       >
         <Menu />
       </button>
