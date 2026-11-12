@@ -59,6 +59,35 @@ export function appLine(app: ExampleApp): AppLine {
   }
 }
 
+/**
+ * Message d'une action faite dans la fenêtre. Il s'affiche dans la fenêtre, au-dessus de ses boutons, jamais en
+ * notification : la fenêtre est modale (couche du dessus) et, au téléphone, couvre presque tout l'écran ; une
+ * notification passerait dessous et l'échec resterait muet.
+ */
+export interface WindowNotice {
+  tone: 'danger' | 'info'
+  text: string
+}
+
+export type NoticeEvent =
+  /** La création ou la mise à jour de la fiche a échoué (Hub injoignable, aucune app ne répond…). */
+  | { kind: 'failed'; action: 'create' | 'update'; message: string }
+  /** Aperçu : clic sur le lien d'une app, qui ne tourne pas ; `text` dit où il mènerait. */
+  | { kind: 'preview'; text: string }
+  /** Autre histoire choisie, ou nouvel essai : le message précédent ne vaut plus. */
+  | { kind: 'story' }
+  | { kind: 'attempt' }
+
+export function noticeAfter(event: NoticeEvent): WindowNotice | null {
+  if (event.kind === 'failed') {
+    const what = event.action === 'create' ? 'La fiche n’a pas été créée' : 'La fiche n’a pas été mise à jour'
+    const why = event.message.trim()
+    return { tone: 'danger', text: why ? `${what} : ${why}` : `${what}.` }
+  }
+  if (event.kind === 'preview') return { tone: 'info', text: event.text }
+  return null
+}
+
 /** Phrase sous la liste des apps : ce que la fiche rassemble, et comment retirer l'exemple du Hub. */
 export function projectNote(story: Pick<ExampleStory, 'project' | 'apps'>, readOnly: boolean): string {
   if (!story.project) {

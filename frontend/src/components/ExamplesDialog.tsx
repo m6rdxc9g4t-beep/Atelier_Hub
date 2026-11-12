@@ -1,17 +1,18 @@
 // « Exemples de la suite » vus du Hub. Les histoires d'exemple vivent dans les apps : le Hub les y lit (lecture
 // seule), dit où chacune est chargée, ouvre l'app là où on la charge, et crée la fiche qui rassemble ce qui l'est.
 // Retirer l'exemple du Hub = supprimer cette fiche, comme une autre. Règles dans `lib/examples.ts`.
+// Ce que la fenêtre a à dire (échec de la fiche, lien de l'aperçu) s'affiche en elle, jamais en notification.
 
 import { ExternalLink } from 'lucide-react'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import { focusOnOpen } from '../lib/dialogs.ts'
-import { APP_SHORT, appLine, pickStory, projectAction, projectNote, STORY_KEY } from '../lib/examples.ts'
+import { APP_SHORT, appLine, noticeAfter, pickStory, projectAction, projectNote, STORY_KEY, type WindowNotice } from '../lib/examples.ts'
 import { api } from '../lib/hub-api.ts'
 import type { ExampleCatalog, HubProject } from '../lib/types.ts'
 import { AppTile } from './AppGlyph.tsx'
 import { ExtLink } from './ExtLink.tsx'
-import { Modal, useUi } from './ui.tsx'
+import { Modal } from './ui.tsx'
 
 function remembered(): string | null {
   try {
@@ -32,11 +33,12 @@ export function ExamplesDialog({
   /** La fiche de l'histoire vient d'être créée (`created`) ou rattachée à ce que les apps ont chargé depuis. */
   onSaved: (project: HubProject, created: boolean) => void
 }) {
-  const { toast } = useUi()
   const [catalog, setCatalog] = useState<ExampleCatalog | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(remembered)
   const [busy, setBusy] = useState(false)
+  // Échec de la fiche, lien de l'aperçu : dit dans la fenêtre (une notification passerait dessous au téléphone).
+  const [notice, setNotice] = useState<WindowNotice | null>(null)
   const reading = useRef(false)
   const body = useRef<HTMLDivElement>(null)
   const selectId = useId()
@@ -94,6 +96,7 @@ export function ExamplesDialog({
 
   const choose = (id: string) => {
     setSelected(id)
+    setNotice(noticeAfter({ kind: 'story' }))
     try {
       localStorage.setItem(STORY_KEY, id)
     } catch {
@@ -108,10 +111,11 @@ export function ExamplesDialog({
       return
     }
     setBusy(true)
+    setNotice(noticeAfter({ kind: 'attempt' }))
     try {
       onSaved(await api.openExampleProject(story.id), action.kind === 'create')
     } catch (e) {
-      toast((e as Error).message, 'danger')
+      setNotice(noticeAfter({ kind: 'failed', action: action.kind, message: (e as Error).message }))
       setBusy(false)
     }
   }
@@ -173,7 +177,13 @@ export function ExamplesDialog({
                       <span className="example-app__status">{line.status}</span>
                     </span>
                     {line.link && (
-                      <ExtLink href={a.url} className="link-btn example-app__link" label={`Atelier ${APP_SHORT[a.app]}`} title={line.link.title}>
+                      <ExtLink
+                        href={a.url}
+                        className="link-btn example-app__link"
+                        label={`Atelier ${APP_SHORT[a.app]}`}
+                        title={line.link.title}
+                        onPreview={(text) => setNotice(noticeAfter({ kind: 'preview', text }))}
+                      >
                         {line.link.label}
                         <span className="sr-only"> dans Atelier {APP_SHORT[a.app]}</span>
                         <ExternalLink aria-hidden />
@@ -190,6 +200,10 @@ export function ExamplesDialog({
         )}
       </div>
       <div className="dialog__actions dialog__actions--pinned">
+        {/* Toujours présent (zone d'annonce), vide tant qu'il n'y a rien à dire. */}
+        <p className="examples__message" data-tone={notice?.tone} role="status" aria-live={notice?.tone === 'danger' ? 'assertive' : 'polite'}>
+          {notice?.text}
+        </p>
         <button type="button" className="btn" onClick={onClose}>
           Fermer
         </button>

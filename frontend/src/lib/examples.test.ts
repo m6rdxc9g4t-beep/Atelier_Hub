@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { appLine, loadedSummary, pickStory, projectAction, projectNote } from './examples.ts'
+import { readFileSync } from 'node:fs'
+
+import { appLine, loadedSummary, noticeAfter, pickStory, projectAction, projectNote } from './examples.ts'
 import type { ExampleApp, ExampleStory } from './types.ts'
 
 const app = (over: Partial<ExampleApp>): ExampleApp => ({ app: 'projets', state: 'absent', detail: null, url: 'http://127.0.0.1:4174/', ...over })
@@ -78,5 +80,27 @@ describe('exemples de la suite', () => {
     assert.match(projectNote(story('a', { project: fiche(true) }), false), /« Studio Garance » .* supprime la fiche : les apps gardent ce qu’elles ont chargé/)
     assert.match(projectNote(story('a'), true), /^Aperçu : rien n’est enregistré/)
     assert.match(projectNote(story('a', { project: fiche(false) }), true), /supprime la fiche/)
+  })
+
+  it('un message né dans la fenêtre s’affiche dans la fenêtre : échec de la fiche, lien de l’aperçu', () => {
+    assert.deepEqual(noticeAfter({ kind: 'failed', action: 'create', message: 'Aucune app de la suite ne répond : les exemples se lisent dans les apps.' }), {
+      tone: 'danger',
+      text: 'La fiche n’a pas été créée : Aucune app de la suite ne répond : les exemples se lisent dans les apps.',
+    })
+    assert.deepEqual(noticeAfter({ kind: 'failed', action: 'update', message: ' ' }), { tone: 'danger', text: 'La fiche n’a pas été mise à jour.' })
+    assert.deepEqual(noticeAfter({ kind: 'preview', text: 'Aperçu : ouvrirait Atelier Tab (http://127.0.0.1:4175/)' }), { tone: 'info', text: 'Aperçu : ouvrirait Atelier Tab (http://127.0.0.1:4175/)' })
+    // Le message d'avant ne vaut plus pour une autre histoire, ni pendant un nouvel essai.
+    assert.equal(noticeAfter({ kind: 'story' }), null)
+    assert.equal(noticeAfter({ kind: 'attempt' }), null)
+  })
+
+  it('la fenêtre n’émet aucune notification : au téléphone elle couvre l’écran, la notification passerait dessous', () => {
+    const dialog = readFileSync(new URL('../components/ExamplesDialog.tsx', import.meta.url), 'utf8')
+    assert.doesNotMatch(dialog, /\btoast\(|useUi/)
+    // Chaque lien vers une app remet à la fenêtre ce qu'il dirait en aperçu, et la fenêtre l'affiche près de ses boutons.
+    const links = dialog.match(/<ExtLink\b[^>]*>/g) ?? []
+    assert.ok(links.length > 0)
+    for (const link of links) assert.match(link, /onPreview=/, link)
+    assert.match(dialog, /dialog__actions--pinned[\s\S]*examples__message/)
   })
 })

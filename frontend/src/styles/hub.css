@@ -1660,6 +1660,23 @@ dialog.dialog::backdrop {
   font-weight: 400;
   color: var(--app-muted);
 }
+/* Message d'une action faite dans la fenêtre (échec de la fiche, lien de l'aperçu) : au-dessus de ses boutons,
+   toujours visible. Une notification passerait sous la fenêtre, qui couvre l'écran au téléphone. */
+.examples__message {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--app-muted);
+  overflow-wrap: anywhere;
+}
+.examples__message[data-tone="danger"] {
+  font-weight: 500;
+  color: var(--danger);
+}
+.examples__message:empty {
+  display: none;
+}
 .example__title {
   margin: 14px 0 0;
   font-weight: 600;
