@@ -309,6 +309,11 @@ describe('exemples de la suite', () => {
     const unknown = await call<{ code: string }>('POST', '/api/exemples-suite/inconnue')
     assert.deepEqual([unknown.status, unknown.body.code], [404, 'NOT_FOUND'])
     assert.equal((await call('POST', '/api/exemples-suite/Pas%20Un%20Id')).status, 422)
+    // Le rattachement vient des apps relues : un champ dans le corps est refusé, pas ignoré en silence.
+    for (const body of [{ projets_id: '4' }, { example: 'app-ecommerce' }, ['studio-garance']]) {
+      const refused = await call<{ code: string }>('POST', '/api/exemples-suite/studio-garance', body)
+      assert.deepEqual([refused.status, refused.body.code], [422, 'VALIDATION'], JSON.stringify(body))
+    }
     assert.equal((await call('POST', '/api/exemples-suite/studio-garance', undefined, { origin: 'https://evil.example' })).status, 403)
     assert.equal((await call<HubProject[]>('GET', '/api/projects')).body.length, 0)
 

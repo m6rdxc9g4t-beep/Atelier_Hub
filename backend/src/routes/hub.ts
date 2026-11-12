@@ -47,6 +47,10 @@ const linkBody = {
   },
 } as const
 
+// Action sans réglage : pas de corps (l'interface n'en envoie pas), ou un objet vide. Tout champ est refusé (422) :
+// le rattachement vient des apps relues, jamais de la requête.
+const noBody = { type: ['object', 'null'], additionalProperties: false, maxProperties: 0 } as const
+
 export function hubRoutes(app: FastifyInstance, db: Db, suite: SuiteContext): void {
   app.get('/api/projects', async () => listProjects(db))
 
@@ -102,7 +106,7 @@ export function hubRoutes(app: FastifyInstance, db: Db, suite: SuiteContext): vo
 
   app.post<{ Params: { histoire: string } }>(
     '/api/exemples-suite/:histoire',
-    { schema: { params: { type: 'object', required: ['histoire'], properties: { histoire: { type: 'string', pattern: EXAMPLE_ID } } } } },
+    { schema: { params: { type: 'object', required: ['histoire'], properties: { histoire: { type: 'string', pattern: EXAMPLE_ID } } }, body: noBody } },
     async (request, reply) => {
       const { project, created } = await openExampleProject(db, suite, request.params.histoire)
       reply.code(created ? 201 : 200)
