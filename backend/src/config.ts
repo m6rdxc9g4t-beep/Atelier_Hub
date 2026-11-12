@@ -6,9 +6,24 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { existsSync } from 'node:fs'
 
+import { isLoopbackHost } from './http/guards.js'
+
 export interface AppAddress {
   api: string
   ui: string
+}
+
+/** Réglages des moteurs d'IA (rédaction des présentations). */
+export interface AiConfig {
+  /** Adresse d'Ollama, toujours sur cette machine ; null : Ollama est désactivé (`ollamaRefused` dit pourquoi). */
+  ollamaUrl: string | null
+  ollamaRefused: string | null
+  ollamaModel: string
+  ollamaTimeoutMs: number
+  /** Fenêtre de contexte demandée à Ollama (num_ctx). */
+  ollamaNumCtx: number
+  /** Taille maximale de ce qui part vers une IA en un appel (caractères). */
+  maxChars: number
 }
 
 export interface HubConfig {
@@ -28,6 +43,7 @@ export interface HubConfig {
     /** Atelier Tab n'a pas d'API de données : le Hub lit son index (`<exports>/_atelier/index.json`, §7.3). */
     tab: { ui: string; exportsDir: string }
   }
+  ai: AiConfig
 }
 
 type Env = Record<string, string | undefined>
@@ -45,6 +61,25 @@ function int(env: Env, name: string, fallback: number, min: number, max: number)
   const n = Number(raw)
   if (!Number.isInteger(n) || n < min || n > max) throw new Error(`${name} doit être un entier entre ${min} et ${max} (reçu : ${raw})`)
   return n
+}
+
+const OLLAMA_DEFAULT = 'http://127.0.0.1:11434'
+
+/**
+ * Adresse d'Ollama : sur cette machine seulement — la promesse « avec Ollama, rien ne quitte la machine » tient à
+ * cela. Une autre adresse (variable héritée du terminal, par exemple) ne fait pas échouer le démarrage du Hub pour
+ * une fonction facultative : elle désactive Ollama, avec l'explication. Seule l'origine est gardée (ni chemin, ni
+ * identifiants : l'adresse apparaît dans les messages d'erreur).
+ */
+function ollamaAddress(env: Env): Pick<AiConfig, 'ollamaUrl' | 'ollamaRefused'> {
+  const raw = env.OLLAMA_URL?.trim() || env.OLLAMA_BASE_URL?.trim() || OLLAMA_DEFAULT
+  try {
+    const parsed = new URL(raw)
+    if ((parsed.protocol === 'http:' || parsed.protocol === 'https:') && isLoopbackHost(parsed.hostname.toLowerCase())) return { ollamaUrl: parsed.origin, ollamaRefused: null }
+  } catch {
+    // Adresse illisible : refusée comme une adresse qui n'est pas locale.
+  }
+  return { ollamaUrl: null, ollamaRefused: 'OLLAMA_URL n’est pas une adresse de cette machine : Ollama est désactivé' }
 }
 
 const backendRoot = resolve(import.meta.dirname, '..')
@@ -73,6 +108,13 @@ export function loadConfig(env: Env = process.env): HubConfig {
         ui: url(env, 'TAB_URL', 'http://127.0.0.1:4175'),
         exportsDir: resolve(env.TAB_EXPORTS_DIR?.trim() || join(homedir(), 'Atelier_Tab', 'exports')),
       },
+    },
+    ai: {
+      ...ollamaAddress(env),
+      ollamaModel: env.OLLAMA_MODEL?.trim() || 'llama3.1:8b',
+      ollamaTimeoutMs: int(env, 'OLLAMA_TIMEOUT_MS', 120_000, 1000, 3_600_000),
+      ollamaNumCtx: int(env, 'OLLAMA_NUM_CTX', 8192, 1024, 262_144),
+      maxChars: int(env, 'HUB_AI_MAX_CHARS', 12_000, 2000, 100_000),
     },
   }
 }

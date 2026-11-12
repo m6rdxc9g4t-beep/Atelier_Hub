@@ -9,12 +9,13 @@ import { buildApp } from '../src/app.js'
 import { loadConfig } from '../src/config.js'
 import { openDatabase } from '../src/db/database.js'
 import type { AppId, Deck, HubProject, PresentationSummary } from '../src/domain/types.js'
+import { fakeAi } from '../test/fixtures/ai.js'
 import { fakeAppsConfig, fakeSuite } from '../test/fixtures/suite.js'
 
 const suite = fakeSuite()
 const config = { ...loadConfig({ HUB_STATIC_DIR: '' }), apps: fakeAppsConfig(suite.tabDir) }
 const db = openDatabase(':memory:')
-const app = await buildApp({ config, db, fetch: suite.fetch, today: () => '2026-11-10' })
+const app = await buildApp({ config, db, fetch: suite.fetch, today: () => '2026-11-10', ai: fakeAi() })
 
 async function call<T>(method: 'GET' | 'POST' | 'PATCH', url: string, payload?: object): Promise<T> {
   const res = await app.inject({ method, url, payload, headers: { host: '127.0.0.1:3700' } })

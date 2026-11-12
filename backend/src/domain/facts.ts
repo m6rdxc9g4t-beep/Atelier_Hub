@@ -71,7 +71,8 @@ export function slideFacts(slide: FactSlide): string[] {
   return facts
 }
 
-const size = (facts: readonly string[]) => facts.reduce((sum, line) => sum + line.length + 1, 0)
+/** Taille d'une liste de faits dans un message : chaque fait y est une ligne « - fait ». */
+export const factsSize = (facts: readonly string[]) => facts.reduce((sum, line) => sum + line.length + 3, 0)
 
 /**
  * Réduit les groupes de faits pour que tout (faits généraux compris) tienne dans `maxChars` : retire le dernier
@@ -80,12 +81,12 @@ const size = (facts: readonly string[]) => facts.reduce((sum, line) => sum + lin
  */
 export function fitFacts(general: readonly string[], groups: readonly (readonly string[])[], maxChars: number): string[][] {
   const fitted = groups.map((group) => [...group])
-  let total = size(general) + fitted.reduce((sum, group) => sum + size(group), 0)
+  let total = factsSize(general) + fitted.reduce((sum, group) => sum + factsSize(group), 0)
   while (total > maxChars) {
     let longest: string[] | null = null
-    for (const group of fitted) if (group.length > 1 && (!longest || size(group) > size(longest))) longest = group
+    for (const group of fitted) if (group.length > 1 && (!longest || factsSize(group) > factsSize(longest))) longest = group
     if (!longest) break
-    total -= (longest.pop() ?? '').length + 1
+    total -= (longest.pop() ?? '').length + 3
   }
   return fitted
 }

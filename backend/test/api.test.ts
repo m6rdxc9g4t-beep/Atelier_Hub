@@ -5,6 +5,7 @@ import { buildApp } from '../src/app.js'
 import { loadConfig, type HubConfig } from '../src/config.js'
 import { openDatabase } from '../src/db/database.js'
 import type { Catalog, ExampleCatalog, HubLink, HubProject, Overview } from '../src/domain/types.js'
+import { fakeAi } from './fixtures/ai.js'
 import { fakeAppsConfig, fakeSuite, type FakeSuiteOptions } from './fixtures/suite.js'
 
 const apps: Awaited<ReturnType<typeof buildApp>>[] = []
@@ -17,7 +18,7 @@ async function setup(options: FakeSuiteOptions = {}) {
   const base = loadConfig({ HUB_STATIC_DIR: '', HUB_DATA_DIR: '/tmp/inutilise' })
   const config: HubConfig = { ...base, apps: fakeAppsConfig(suite.tabDir) }
   const db = openDatabase(':memory:')
-  const app = await buildApp({ config, db, fetch: suite.fetch, today: () => '2026-11-10' })
+  const app = await buildApp({ config, db, fetch: suite.fetch, today: () => '2026-11-10', ai: fakeAi() })
   apps.push(app)
   const call = async <T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', url: string, payload?: unknown, headers: Record<string, string> = {}) => {
     const response = await app.inject({ method, url, payload: payload as object, headers: { host: '127.0.0.1:3700', ...headers } })

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { FACT_LIMITS, fitFacts, generalFacts, isPageContent, slideFacts, staleNumbers } from '../src/domain/facts.js'
+import { FACT_LIMITS, factsSize, fitFacts, generalFacts, isPageContent, slideFacts, staleNumbers } from '../src/domain/facts.js'
 import { NBSP } from '../src/domain/french.js'
 import { resolveSlide } from '../src/domain/slides.js'
 import { SLIDE_KINDS, type Deck, type Overview, type PresentationSummary, type SlideKind, type SlideRecord } from '../src/domain/types.js'
@@ -135,7 +135,8 @@ describe('faits d’une diapositive', () => {
       ['Titre : B', 'd'.repeat(30)],
       ['Titre : C', 'e'.repeat(50), 'f'.repeat(50), 'g'.repeat(50)],
     ]
-    const size = (fitted: string[][]) => [...general, ...fitted.flat()].reduce((sum, line) => sum + line.length + 1, 0)
+    // Chaque fait compte pour sa ligne « - fait » dans le message.
+    const size = (fitted: string[][]) => factsSize([...general, ...fitted.flat()])
     assert.deepEqual(fitFacts(general, groups, 10_000), groups, 'rien à retirer')
     const fitted = fitFacts(general, groups, 300)
     assert.ok(size(fitted) <= 300, String(size(fitted)))

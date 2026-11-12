@@ -25,7 +25,8 @@ const kinds = (slides: SlideRecord[]) => slides.map((slide) => slide.kind)
 describe('migration 3 : présentations', () => {
   it('s’ajoute à une base en version 2 sans toucher aux fiches', () => {
     const db = openDatabase(':memory:')
-    db.exec('DROP TABLE slides; DROP TABLE presentations;')
+    // Une base en version 2 n'a aucune des tables venues depuis (présentations, puis réglages).
+    db.exec('DROP TABLE slides; DROP TABLE presentations; DROP TABLE settings;')
     db.pragma('user_version = 2')
     db.prepare("INSERT INTO projects (slug, name, created_at, updated_at) VALUES ('kpi-cgo', 'KPI CGO', '2026-11-01', '2026-11-01')").run()
     db.prepare("INSERT INTO links (project_id, app, kind, ref, label, created_at) VALUES (1, 'source', 'link', 'https://exemple.fr', 'Exemple', '2026-11-01')").run()
