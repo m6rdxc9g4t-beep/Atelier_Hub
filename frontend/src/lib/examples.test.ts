@@ -56,7 +56,7 @@ describe('exemples de la suite', () => {
       projectNote(story('a', { apps: [loaded, app({ state: 'down' })] }), false),
       'Chargée dans 1 app sur 2 : la fiche rassemble ce qui est chargé. Une app qui ne répond pas n’est pas rattachée : relance-la, puis reviens ici.',
     )
-    assert.match(projectNote(story('a', { project: fiche(false) }), false), /mets la fiche à jour/)
+    assert.match(projectNote(story('a', { project: fiche(false) }), false), /^La fiche « Studio Garance » n’est pas rattachée à tout ce que les apps ont chargé .* mets la fiche à jour/)
     assert.match(projectNote(story('a', { project: fiche(true) }), false), /« Studio Garance » .* supprime la fiche : les apps gardent ce qu’elles ont chargé/)
     assert.match(projectNote(story('a'), true), /^Aperçu : rien n’est enregistré/)
     assert.match(projectNote(story('a', { project: fiche(false) }), true), /supprime la fiche/)

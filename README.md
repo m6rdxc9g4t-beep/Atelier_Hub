@@ -27,7 +27,7 @@ Au pied de la barre latérale, « Exemples de la suite » ouvre les histoires fi
 
 1. **lit** ce que chaque app en dit (lecture seule, en parallèle, délai borné) et montre, pour l'histoire choisie, où elle est chargée : Convert, Tab, Viz, Nexus, Projets, Wiki. Une app arrêtée le dit sur sa ligne, sans gêner les autres. (Trésorerie fait partie du parcours des histoires, mais le Hub ne la lit pas.)
 2. **ouvre l'app** : « Ouvrir » mène à ce qui est chargé (le projet, la page d'entrée du Wiki, les jeux de Viz, l'historique de Convert), « Charger » à l'endroit de l'app où l'on charge l'exemple. Au retour sur l'onglet, la fenêtre relit les apps.
-3. **crée la fiche** de l'histoire (« Créer la fiche ») : une fiche ordinaire, à son nom, rattachée à ce que les apps ont chargé. Si une app charge l'histoire plus tard, le bouton devient « Mettre à jour la fiche » ; sinon « Ouvrir la fiche ». Une seule fiche par histoire, marquée « Exemple ».
+3. **crée la fiche** de l'histoire (« Créer la fiche ») : une fiche ordinaire, à son nom, rattachée à ce que les apps ont chargé. Si une app charge l'histoire plus tard (ou si tu as changé depuis un rattachement de la fiche à la main), le bouton devient « Mettre à jour la fiche » ; sinon « Ouvrir la fiche ». Une seule fiche par histoire, marquée « Exemple ».
 
 Retirer l'exemple du Hub, c'est supprimer cette fiche (Modifier → Supprimer la fiche) : les apps gardent ce qu'elles ont chargé, chacune le retire de son côté.
 

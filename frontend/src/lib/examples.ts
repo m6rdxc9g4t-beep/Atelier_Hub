@@ -17,7 +17,8 @@ export function pickStory(stories: readonly ExampleStory[], remembered: string |
 /**
  * Ce que fait le bouton principal pour une histoire :
  * - `create` : pas encore de fiche (`blocked` en aperçu : rien ne s'y enregistre) ;
- * - `update` : la fiche existe, mais une app a chargé l'histoire depuis : on la rattache, puis on l'ouvre ;
+ * - `update` : la fiche existe, mais n'est pas rattachée à tout ce que les apps ont chargé (chargement fait depuis,
+ *   rattachement changé à la main) : on la rattache, puis on l'ouvre ;
  * - `open` : la fiche est à jour (ou l'aperçu, lecture seule) : on l'ouvre, sans rien écrire.
  */
 export type ProjectAction = { kind: 'create'; label: string; blocked: boolean } | { kind: 'update' | 'open'; label: string; blocked: false }
@@ -61,6 +62,9 @@ export function projectNote(story: Pick<ExampleStory, 'project' | 'apps'>, readO
     const down = story.apps.some((a) => a.state === 'down') ? ' Une app qui ne répond pas n’est pas rattachée : relance-la, puis reviens ici.' : ''
     return `${loadedSummary(story.apps)} : la fiche rassemble ce qui est chargé.${absent}${down}`
   }
-  if (!story.project.current && !readOnly) return 'Une app a chargé l’histoire depuis la création de la fiche : mets la fiche à jour pour l’y rattacher.'
+  if (!story.project.current && !readOnly) {
+    // Vrai dans les deux cas : une app a chargé l'histoire depuis, ou le rattachement a été changé à la main.
+    return `La fiche « ${story.project.name} » n’est pas rattachée à tout ce que les apps ont chargé pour cette histoire : mets la fiche à jour pour l’y rattacher.`
+  }
   return `La fiche « ${story.project.name} » rassemble cette histoire. Pour retirer l’exemple du Hub, supprime la fiche : les apps gardent ce qu’elles ont chargé.`
 }
