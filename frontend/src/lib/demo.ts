@@ -3,13 +3,14 @@
 
 import snapshot from '../demo/snapshot.json'
 import { ApiError, type HubApi } from './api.ts'
-import type { Catalog, HubProject, Overview } from './types.ts'
+import type { Catalog, ExampleCatalog, HubProject, Overview } from './types.ts'
 
 interface Snapshot {
   first: number
   projects: HubProject[]
   overviews: Record<string, Overview>
   catalogs: Record<string, Catalog>
+  examples: ExampleCatalog
 }
 
 const data = snapshot as unknown as Snapshot
@@ -30,6 +31,8 @@ export const demoApi: HubApi = {
     const needle = normalize(q.trim())
     return needle ? { ...catalog, candidates: catalog.candidates.filter((c) => normalize(`${c.label} ${c.detail ?? ''}`).includes(needle)) } : catalog
   },
+  examples: async () => data.examples,
+  openExampleProject: readOnly,
   createProject: readOnly,
   updateProject: readOnly,
   deleteProject: readOnly,

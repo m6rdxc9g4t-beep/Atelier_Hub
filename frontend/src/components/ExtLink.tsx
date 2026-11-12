@@ -11,6 +11,7 @@ export function ExtLink({
   children,
   label,
   title,
+  onPreview,
 }: {
   href: string
   className?: string
@@ -18,12 +19,19 @@ export function ExtLink({
   /** Où mène le lien (« Atelier Projets › Tableau de bord mensuel »), pour l'aperçu et les lecteurs d'écran. */
   label?: string
   title?: string
+  /**
+   * Aperçu : reçoit la phrase « ouvrirait … » au lieu de la notification. Pour un lien placé dans une fenêtre, qui
+   * l'affiche elle-même : une notification passerait sous la fenêtre.
+   */
+  onPreview?: (text: string) => void
 }) {
   const { toast } = useUi()
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (!api.demo) return
     event.preventDefault()
-    toast(`Aperçu : ouvrirait ${label ?? 'l’app'} (${href})`)
+    const text = `Aperçu : ouvrirait ${label ?? 'l’app'} (${href})`
+    if (onPreview) onPreview(text)
+    else toast(text)
   }
   return (
     <a href={href} target="_blank" rel="noreferrer" className={className} onClick={onClick} title={title}>

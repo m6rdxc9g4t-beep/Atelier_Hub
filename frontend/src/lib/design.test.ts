@@ -23,6 +23,17 @@ describe('charte de la suite', () => {
     assert.match(read('../components/Dialogs.tsx'), /dialog__left[\s\S]*?className="dialog__group"/)
   })
 
+  it('une variante d’entrée de navigation l’emporte sur `.nav-link`', () => {
+    // À poids égal, la règle écrite en dernier gagne : une variante à une seule classe déclarée avant `.nav-link`
+    // ne changerait rien (« Exemples de la suite » restait de la couleur des fiches).
+    const css = withoutComments(read('../styles/hub.css'))
+    const base = css.search(/(?:^|})\s*\.nav-link\s*{/)
+    assert.ok(base >= 0, '.nav-link est déclaré')
+    const variants = [...css.matchAll(/(?:^|})\s*((?:\.nav-link)?\.nav-link--[a-z-]+)(?::[a-z-]+)?\s*{/g)]
+    assert.ok(variants.some((m) => m[1]!.endsWith('.nav-link--quiet')), '.nav-link--quiet est déclaré')
+    for (const m of variants) assert.ok(m[1]!.startsWith('.nav-link.') || m.index > base, `${m[1]} : écrit \`.nav-link${m[1]}\` ou déclaré après \`.nav-link\``)
+  })
+
   it('la signature du Hub est déclarée et activée', () => {
     const css = read('../styles/hub-signature.css')
     assert.match(css, /--atelier-sig-hub:\s*#9a3e6c/)

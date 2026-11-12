@@ -1,7 +1,7 @@
 // Coquille (charte v2 « Linear ») : marque « Atelier Hub » et « À propos », sélecteur de la suite, liste des fiches,
-// choix du thème (préférence commune à la suite), barre haute.
+// « Exemples de la suite » et choix du thème (préférence commune à la suite) au pied, barre haute.
 
-import { Check, LayoutGrid, Menu, Monitor, Moon, Plus, Sun } from 'lucide-react'
+import { BookOpen, Check, LayoutGrid, Menu, Monitor, Moon, Plus, Sun } from 'lucide-react'
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 
 import { href, onLinkClick, projectPath } from '../lib/router.ts'
@@ -204,12 +204,15 @@ export function Sidebar({
   currentSlug,
   loading,
   onNewProject,
+  onExamples,
   onNavigate,
 }: {
   projects: HubProject[]
   currentSlug: string | null
   loading: boolean
   onNewProject: () => void
+  /** Ouvre « Exemples de la suite » (histoires fictives à suivre d'une app à l'autre). */
+  onExamples: () => void
   onNavigate: () => void
 }) {
   return (
@@ -255,6 +258,12 @@ export function Sidebar({
         })}
         {!loading && projects.length === 0 && <p className="side-note">Aucune fiche pour l’instant.</p>}
       </nav>
+      <div className="sidebar__tools">
+        <button type="button" className="nav-link nav-link--quiet" aria-haspopup="dialog" onClick={onExamples}>
+          <BookOpen aria-hidden />
+          <span className="nav-link__text">Exemples de la suite</span>
+        </button>
+      </div>
       <div className="sidebar__foot">
         <ThemeSwitch />
       </div>
@@ -271,6 +280,7 @@ export function Topbar({ title, onToggleNav, navOpen, children }: { title: strin
         aria-label={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
         aria-expanded={navOpen}
         onClick={onToggleNav}
+        data-focus-fallback=""
       >
         <Menu />
       </button>

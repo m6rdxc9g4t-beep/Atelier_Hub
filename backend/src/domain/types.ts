@@ -16,6 +16,8 @@ export interface HubProject {
   wiki_space_id: string | null
   wiki_space: string | null
   tab_project: string | null
+  /** Histoire des « Exemples de la suite » dont cette fiche est la fiche (null pour une fiche ordinaire). */
+  example: string | null
   created_at: string
   updated_at: string
 }
@@ -186,4 +188,45 @@ export interface Catalog {
   state: PanelState
   message: string | null
   candidates: Candidate[]
+}
+
+/**
+ * loaded : l'histoire est chargée dans l'app · absent : pas encore, elle peut l'être · unavailable : l'app répond
+ * mais ne livre pas cette histoire (rien à y charger) · down : l'app ne répond pas (on ne sait pas).
+ */
+export type ExampleAppState = 'loaded' | 'absent' | 'unavailable' | 'down'
+
+export interface ExampleApp {
+  app: AppId
+  state: ExampleAppState
+  /** Ce que l'app a chargé (« Projet « … » »), ou pourquoi on ne le sait pas, ou pourquoi rien ne s'y charge. */
+  detail: string | null
+  /** Ce qui est chargé, sinon l'endroit de l'app où l'on charge l'exemple (le Hub ne le charge pas lui-même) ; l'accueil de l'app quand elle ne livre pas l'histoire. */
+  url: string
+}
+
+/** Fiche du Hub créée pour une histoire ; `current` : rattachée à tout ce que les apps ont chargé pour elle. */
+export interface ExampleProject {
+  id: number
+  slug: string
+  name: string
+  current: boolean
+}
+
+export interface ExampleStory {
+  id: string
+  title: string
+  subtitle: string
+  sector: string
+  summary: string
+  /** Dans l'ordre du parcours de l'histoire : Convert, Tab, Viz, Nexus, Projets, Wiki. */
+  apps: ExampleApp[]
+  project: ExampleProject | null
+}
+
+/** « Exemples de la suite » vus du Hub : les histoires lues dans les apps (down : aucune app n'a répondu). */
+export interface ExampleCatalog {
+  state: PanelState
+  message: string | null
+  stories: ExampleStory[]
 }

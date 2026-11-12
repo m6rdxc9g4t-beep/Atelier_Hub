@@ -11,8 +11,9 @@
    "wiki_space_id": null,
    "wiki_space": null,
    "tab_project": null,
-   "created_at": "2026-11-10T10:03:49.021Z",
-   "updated_at": "2026-11-10T10:03:49.021Z"
+   "created_at": "2026-11-12T08:52:19.496Z",
+   "updated_at": "2026-11-12T08:52:19.496Z",
+   "example": null
   },
   {
    "id": 1,
@@ -25,8 +26,24 @@
    "wiki_space_id": "7",
    "wiki_space": "KPI CGO",
    "tab_project": "KPI CGO",
-   "created_at": "2026-11-10T10:03:49.013Z",
-   "updated_at": "2026-11-10T10:03:49.021Z"
+   "created_at": "2026-11-12T08:52:19.486Z",
+   "updated_at": "2026-11-12T08:52:19.495Z",
+   "example": null
+  },
+  {
+   "id": 3,
+   "slug": "studio-garance",
+   "name": "Studio Garance",
+   "description": "Un studio de design graphique d’Arles clôture son mois : relevés bancaires convertis, catégorisés, comparés au budget ; le poste Matériel dépasse et devient une tâche de suivi. Exemple de la suite Atelier (données fictives).",
+   "keywords": "Studio Garance",
+   "projets_id": "12",
+   "projets_name": "Gestion 2026 — Studio Garance",
+   "wiki_space_id": "9",
+   "wiki_space": "Studio Garance",
+   "tab_project": "Compta 2026",
+   "created_at": "2026-11-12T08:52:19.528Z",
+   "updated_at": "2026-11-12T08:52:19.528Z",
+   "example": "studio-garance"
   }
  ],
  "overviews": {
@@ -42,8 +59,9 @@
     "wiki_space_id": "7",
     "wiki_space": "KPI CGO",
     "tab_project": "KPI CGO",
-    "created_at": "2026-11-10T10:03:49.013Z",
-    "updated_at": "2026-11-10T10:03:49.021Z"
+    "created_at": "2026-11-12T08:52:19.486Z",
+    "updated_at": "2026-11-12T08:52:19.495Z",
+    "example": null
    },
    "links": [
     {
@@ -602,7 +620,7 @@
      }
     ]
    },
-   "generated_at": "2026-11-10T10:03:49.055Z"
+   "generated_at": "2026-11-12T08:52:19.544Z"
   },
   "2": {
    "project": {
@@ -616,8 +634,9 @@
     "wiki_space_id": null,
     "wiki_space": null,
     "tab_project": null,
-    "created_at": "2026-11-10T10:03:49.021Z",
-    "updated_at": "2026-11-10T10:03:49.021Z"
+    "created_at": "2026-11-12T08:52:19.496Z",
+    "updated_at": "2026-11-12T08:52:19.496Z",
+    "example": null
    },
    "links": [],
    "kpis": null,
@@ -666,7 +685,298 @@
     "url": "http://127.0.0.1:3100/",
     "items": []
    },
-   "generated_at": "2026-11-10T10:03:49.055Z"
+   "generated_at": "2026-11-12T08:52:19.545Z"
+  },
+  "3": {
+   "project": {
+    "id": 3,
+    "slug": "studio-garance",
+    "name": "Studio Garance",
+    "description": "Un studio de design graphique d’Arles clôture son mois : relevés bancaires convertis, catégorisés, comparés au budget ; le poste Matériel dépasse et devient une tâche de suivi. Exemple de la suite Atelier (données fictives).",
+    "keywords": "Studio Garance",
+    "projets_id": "12",
+    "projets_name": "Gestion 2026 — Studio Garance",
+    "wiki_space_id": "9",
+    "wiki_space": "Studio Garance",
+    "tab_project": "Compta 2026",
+    "created_at": "2026-11-12T08:52:19.528Z",
+    "updated_at": "2026-11-12T08:52:19.528Z",
+    "example": "studio-garance"
+   },
+   "links": [],
+   "kpis": {
+    "hours_spent": 1.25,
+    "hours_estimated": 0,
+    "features_total": 0,
+    "features_done": 0,
+    "active": 0,
+    "blocked": 0,
+    "next_due": {
+     "label": "Relancer la facture 2026-043 (Domaine des Alpilles)",
+     "date": "2026-11-20",
+     "kind": "item"
+    }
+   },
+   "projets": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:4174/?projet=12",
+    "project_name": "Gestion 2026 — Studio Garance",
+    "features": [],
+    "active": [],
+    "milestones": [
+     {
+      "id": "21",
+      "name": "Clôture d’octobre",
+      "date": "2026-11-06",
+      "reached": true
+     }
+    ],
+    "items_total": 4
+   },
+   "wiki": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:3200/",
+    "space": "Studio Garance",
+    "mode": "space",
+    "items": [
+     {
+      "id": "61",
+      "title": "Parcours de l’exemple",
+      "space": "Studio Garance",
+      "excerpt": null,
+      "updated_at": "2026-11-08T09:00:00+01:00",
+      "url": "http://127.0.0.1:3200/p/61",
+      "pinned": false
+     },
+     {
+      "id": "65",
+      "title": "Bilan octobre 2026",
+      "space": "Studio Garance",
+      "excerpt": null,
+      "updated_at": "2026-11-08T09:00:00+01:00",
+      "url": "http://127.0.0.1:3200/p/65",
+      "pinned": false
+     },
+     {
+      "id": "64",
+      "title": "Bilan septembre 2026",
+      "space": "Studio Garance",
+      "excerpt": null,
+      "updated_at": "2026-11-08T09:00:00+01:00",
+      "url": "http://127.0.0.1:3200/p/64",
+      "pinned": false
+     },
+     {
+      "id": "66",
+      "title": "Fournisseurs",
+      "space": "Studio Garance",
+      "excerpt": null,
+      "updated_at": "2026-11-08T09:00:00+01:00",
+      "url": "http://127.0.0.1:3200/p/66",
+      "pinned": false
+     }
+    ]
+   },
+   "sources": {
+    "items": [
+     {
+      "id": "viz-d4",
+      "kind": "database",
+      "label": "Studio Garance — opérations août-oct. 2026",
+      "location": "Atelier Viz · jeu « Studio Garance — opérations août-oct. 2026 »",
+      "url": "http://127.0.0.1:8000/#/donnees",
+      "origin": "viz",
+      "detail": "Jeu de données Viz · 96 lignes",
+      "link_id": null
+     },
+     {
+      "id": "viz-d5",
+      "kind": "database",
+      "label": "Studio Garance — Clients et factures",
+      "location": "Atelier Viz · jeu « Studio Garance — Clients et factures »",
+      "url": "http://127.0.0.1:8000/#/donnees",
+      "origin": "viz",
+      "detail": "Jeu de données Viz · 12 lignes",
+      "link_id": null
+     }
+    ]
+   },
+   "tab": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:4175/",
+    "items": [
+     {
+      "id": "tbl_ex_studio-garance_0",
+      "name": "Opérations août-oct. 2026",
+      "project": "Compta 2026",
+      "rows": 96,
+      "updated_at": "2026-11-08T09:10:00+01:00",
+      "url": "http://127.0.0.1:4175/",
+      "pinned": false
+     },
+     {
+      "id": "tbl_ex_studio-garance_1",
+      "name": "Clients et factures",
+      "project": "Compta 2026",
+      "rows": 12,
+      "updated_at": "2026-11-08T09:10:00+01:00",
+      "url": "http://127.0.0.1:4175/",
+      "pinned": false
+     }
+    ]
+   },
+   "viz": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:8000/#/",
+    "items": [
+     {
+      "id": "e5f6a1b2c3d4",
+      "name": "Exemple — Studio Garance",
+      "detail": "3 pages · 14 visuels",
+      "updated_at": "2026-11-08T09:20:00+01:00",
+      "url": "http://127.0.0.1:8000/#/rapports/e5f6a1b2c3d4",
+      "pinned": false
+     }
+    ]
+   },
+   "convert": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:8010/#/historique",
+    "items": [
+     {
+      "id": "c00000000005",
+      "name": "Opérations catégorisées — Studio Garance",
+      "detected": "CSV · 96 lignes",
+      "rows": 96,
+      "created_at": "2026-11-08T09:07:00+01:00",
+      "sent_to": [],
+      "url": "http://127.0.0.1:8010/#/conversions/c00000000005",
+      "pinned": false
+     },
+     {
+      "id": "c00000000004",
+      "name": "Relevé octobre 2026 — Studio Garance",
+      "detected": "Relevé bancaire · 34 opérations",
+      "rows": 34,
+      "created_at": "2026-11-08T09:05:00+01:00",
+      "sent_to": [
+       "Opérations août-oct. 2026"
+      ],
+      "url": "http://127.0.0.1:8010/#/conversions/c00000000004",
+      "pinned": false
+     }
+    ]
+   },
+   "nexus": {
+    "state": "ok",
+    "message": null,
+    "url": "http://127.0.0.1:3100/",
+    "items": [
+     {
+      "name": "data_analyst",
+      "display_name": "Data Analyst / Power BI",
+      "description": "Exploration des données, DAX, modèle en étoile.",
+      "category": "Données",
+      "reasons": [
+       "Viz",
+       "Tab",
+       "Convert"
+      ],
+      "score": 3,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=data_analyst",
+      "pinned": false
+     },
+     {
+      "name": "orchestrateur",
+      "display_name": "Orchestrateur",
+      "description": "Lit Viz, Projets et Tab, délègue et assemble.",
+      "category": "Général",
+      "reasons": [
+       "Projets",
+       "Viz",
+       "Tab"
+      ],
+      "score": 3,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=orchestrateur",
+      "pinned": false
+     },
+     {
+      "name": "tableur",
+      "display_name": "Tableur",
+      "description": "Totaux, formules, échéances dans les tables.",
+      "category": "Données",
+      "reasons": [
+       "Tab",
+       "Convert"
+      ],
+      "score": 2,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=tableur",
+      "pinned": false
+     },
+     {
+      "name": "chef_de_projet",
+      "display_name": "Chef de projet",
+      "description": "Points d’avancement, saisie de temps, statuts.",
+      "category": "Gestion de projet",
+      "reasons": [
+       "Projets",
+       "Tab"
+      ],
+      "score": 2,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=chef_de_projet",
+      "pinned": false
+     },
+     {
+      "name": "redacteur",
+      "display_name": "Rédacteur",
+      "description": "Courriels, comptes rendus, documentation.",
+      "category": "Communication",
+      "reasons": [
+       "Wiki"
+      ],
+      "score": 1,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=redacteur",
+      "pinned": false
+     },
+     {
+      "name": "product_owner",
+      "display_name": "Product Owner",
+      "description": "User stories, critères d’acceptation, estimations.",
+      "category": "Gestion de projet",
+      "reasons": [
+       "Projets"
+      ],
+      "score": 1,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=product_owner",
+      "pinned": false
+     },
+     {
+      "name": "developpeur",
+      "display_name": "Développeur",
+      "description": "Branches, commits #ID, PR brouillons.",
+      "category": "Développement",
+      "reasons": [
+       "Projets"
+      ],
+      "score": 1,
+      "local_only": false,
+      "url": "http://127.0.0.1:3100/?agent=developpeur",
+      "pinned": false
+     }
+    ]
+   },
+   "generated_at": "2026-11-12T08:52:19.545Z"
   }
  },
  "catalogs": {
@@ -689,6 +999,14 @@
      "label": "Refonte du site",
      "detail": null,
      "bind": true
+    },
+    {
+     "app": "projets",
+     "kind": "project",
+     "ref": "12",
+     "label": "Gestion 2026 — Studio Garance",
+     "detail": "Exemple de la suite Atelier (données fictives).",
+     "bind": true
     }
    ]
   },
@@ -710,6 +1028,14 @@
      "ref": "7",
      "label": "KPI CGO",
      "detail": "5 pages",
+     "bind": true
+    },
+    {
+     "app": "wiki",
+     "kind": "space",
+     "ref": "9",
+     "label": "Studio Garance",
+     "detail": "6 pages",
      "bind": true
     }
    ]
@@ -744,6 +1070,14 @@
     },
     {
      "app": "viz",
+     "kind": "report",
+     "ref": "e5f6a1b2c3d4",
+     "label": "Exemple — Studio Garance",
+     "detail": "Rapport · 3 pages",
+     "bind": false
+    },
+    {
+     "app": "viz",
      "kind": "dataset",
      "ref": "d1",
      "label": "kpi_cgo_indicateurs",
@@ -765,6 +1099,30 @@
      "label": "ventes_2026",
      "detail": "Jeu de données · 573 lignes",
      "bind": false
+    },
+    {
+     "app": "viz",
+     "kind": "dataset",
+     "ref": "d4",
+     "label": "Studio Garance — opérations août-oct. 2026",
+     "detail": "Jeu de données · 96 lignes",
+     "bind": false
+    },
+    {
+     "app": "viz",
+     "kind": "dataset",
+     "ref": "d5",
+     "label": "Studio Garance — Clients et factures",
+     "detail": "Jeu de données · 12 lignes",
+     "bind": false
+    },
+    {
+     "app": "viz",
+     "kind": "dataset",
+     "ref": "d6",
+     "label": "Rénovation Urbaine 2026 — opérations août-oct. 2026",
+     "detail": "Jeu de données · 118 lignes",
+     "bind": false
     }
    ]
   },
@@ -772,6 +1130,14 @@
    "state": "ok",
    "message": null,
    "candidates": [
+    {
+     "app": "tab",
+     "kind": "project",
+     "ref": "Compta 2026",
+     "label": "Compta 2026",
+     "detail": "Projet Tab",
+     "bind": true
+    },
     {
      "app": "tab",
      "kind": "project",
@@ -819,6 +1185,22 @@
      "label": "Courses",
      "detail": "Maison · 35 lignes",
      "bind": false
+    },
+    {
+     "app": "tab",
+     "kind": "table",
+     "ref": "tbl_ex_studio-garance_0",
+     "label": "Opérations août-oct. 2026",
+     "detail": "Compta 2026 · 96 lignes",
+     "bind": false
+    },
+    {
+     "app": "tab",
+     "kind": "table",
+     "ref": "tbl_ex_studio-garance_1",
+     "label": "Clients et factures",
+     "detail": "Compta 2026 · 12 lignes",
+     "bind": false
     }
    ]
   },
@@ -848,6 +1230,30 @@
      "ref": "c00000000003",
      "label": "Relevé bancaire octobre",
      "detail": "Relevé bancaire · 42 opérations",
+     "bind": false
+    },
+    {
+     "app": "convert",
+     "kind": "conversion",
+     "ref": "c00000000004",
+     "label": "Relevé octobre 2026 — Studio Garance",
+     "detail": "Relevé bancaire · 34 opérations",
+     "bind": false
+    },
+    {
+     "app": "convert",
+     "kind": "conversion",
+     "ref": "c00000000005",
+     "label": "Opérations catégorisées — Studio Garance",
+     "detail": "CSV · 96 lignes",
+     "bind": false
+    },
+    {
+     "app": "convert",
+     "kind": "conversion",
+     "ref": "c00000000006",
+     "label": "Relevé octobre 2026 — Rénovation Urbaine 2026",
+     "detail": "Relevé bancaire · 41 opérations",
      "bind": false
     }
    ]
@@ -938,6 +1344,155 @@
     }
    ]
   }
+ },
+ "examples": {
+  "state": "ok",
+  "message": null,
+  "stories": [
+   {
+    "id": "studio-garance",
+    "title": "Studio Garance",
+    "subtitle": "Clôture comptable d’un studio de design",
+    "sector": "Compta",
+    "summary": "Un studio de design graphique d’Arles clôture son mois : relevés bancaires convertis, catégorisés, comparés au budget ; le poste Matériel dépasse et devient une tâche de suivi.",
+    "apps": [
+     {
+      "app": "convert",
+      "state": "loaded",
+      "detail": "2 conversions",
+      "url": "http://127.0.0.1:8010/#/historique"
+     },
+     {
+      "app": "tab",
+      "state": "loaded",
+      "detail": "Projet « Compta 2026 » · 2 tables",
+      "url": "http://127.0.0.1:4175/"
+     },
+     {
+      "app": "viz",
+      "state": "loaded",
+      "detail": "2 jeux de données",
+      "url": "http://127.0.0.1:8000/#/donnees"
+     },
+     {
+      "app": "nexus",
+      "state": "loaded",
+      "detail": "2 workflows",
+      "url": "http://127.0.0.1:3100/"
+     },
+     {
+      "app": "projets",
+      "state": "loaded",
+      "detail": "Projet « Gestion 2026 — Studio Garance »",
+      "url": "http://127.0.0.1:4174/?projet=12"
+     },
+     {
+      "app": "wiki",
+      "state": "loaded",
+      "detail": "Espace « Studio Garance »",
+      "url": "http://127.0.0.1:3200/p/61"
+     }
+    ],
+    "project": {
+     "id": 3,
+     "slug": "studio-garance",
+     "name": "Studio Garance",
+     "current": true
+    }
+   },
+   {
+    "id": "renovation-urbaine",
+    "title": "Rénovation Urbaine 2026",
+    "subtitle": "Suivi d’un chantier de réhabilitation",
+    "sector": "Chantier",
+    "summary": "La réhabilitation d’un immeuble de logements à Villeurbanne : planning des lots, situations de travaux payées depuis le compte chantier, budget par lot ; le gros œuvre dépasse son enveloppe du mois.",
+    "apps": [
+     {
+      "app": "convert",
+      "state": "loaded",
+      "detail": "1 conversion",
+      "url": "http://127.0.0.1:8010/#/historique"
+     },
+     {
+      "app": "tab",
+      "state": "absent",
+      "detail": null,
+      "url": "http://127.0.0.1:4175/"
+     },
+     {
+      "app": "viz",
+      "state": "loaded",
+      "detail": "2 jeux de données",
+      "url": "http://127.0.0.1:8000/#/donnees"
+     },
+     {
+      "app": "nexus",
+      "state": "absent",
+      "detail": null,
+      "url": "http://127.0.0.1:3100/"
+     },
+     {
+      "app": "projets",
+      "state": "absent",
+      "detail": null,
+      "url": "http://127.0.0.1:4174/"
+     },
+     {
+      "app": "wiki",
+      "state": "absent",
+      "detail": null,
+      "url": "http://127.0.0.1:3200/"
+     }
+    ],
+    "project": null
+   },
+   {
+    "id": "app-ecommerce",
+    "title": "App E-Commerce v2",
+    "subtitle": "Une boutique en ligne lance la v2 de son app",
+    "sector": "Produit",
+    "summary": "Verveine & Co, boutique de thés en ligne, sort la v2 de son app en octobre : backlog et sprints, commandes du back-office, virements Stripe ; la pub du lancement dépasse son budget.",
+    "apps": [
+     {
+      "app": "convert",
+      "state": "absent",
+      "detail": null,
+      "url": "http://127.0.0.1:8010/#/"
+     },
+     {
+      "app": "tab",
+      "state": "absent",
+      "detail": null,
+      "url": "http://127.0.0.1:4175/"
+     },
+     {
+      "app": "viz",
+      "state": "absent",
+      "detail": null,
+      "url": "http://127.0.0.1:8000/#/"
+     },
+     {
+      "app": "nexus",
+      "state": "absent",
+      "detail": null,
+      "url": "http://127.0.0.1:3100/"
+     },
+     {
+      "app": "projets",
+      "state": "absent",
+      "detail": null,
+      "url": "http://127.0.0.1:4174/"
+     },
+     {
+      "app": "wiki",
+      "state": "absent",
+      "detail": null,
+      "url": "http://127.0.0.1:3200/"
+     }
+    ],
+    "project": null
+   }
+  ]
  },
  "first": 1,
  "other": 2

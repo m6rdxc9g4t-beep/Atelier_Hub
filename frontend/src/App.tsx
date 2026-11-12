@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { flushSync } from 'react-dom'
 
 import { LinkDialog, ProjectDialog, SourceDialog } from './components/Dialogs.tsx'
+import { ExamplesDialog } from './components/ExamplesDialog.tsx'
 import { AboutDialog, Sidebar, Topbar } from './components/Shell.tsx'
 import { UiProvider, useUi } from './components/ui.tsx'
 import { localToday } from './lib/format.ts'
@@ -34,7 +35,7 @@ function writeLast(slug: string): void {
   }
 }
 
-type DialogState = { kind: 'link'; app: AppId } | { kind: 'source' } | { kind: 'project'; project: HubProject | null } | null
+type DialogState = { kind: 'link'; app: AppId } | { kind: 'source' } | { kind: 'project'; project: HubProject | null } | { kind: 'examples' } | null
 
 function Hub() {
   const route = useRoute()
@@ -201,10 +202,15 @@ function Hub() {
           Crée la fiche d’un projet, rattache-le à Atelier Projets, au Wiki et à Tab : son avancement, sa documentation, ses tables, ses rapports, ses
           sources et les agents utiles se retrouvent sur un seul écran.
         </p>
-        <button type="button" className="btn btn--primary" onClick={() => setDialog({ kind: 'project', project: null })}>
-          <Plus aria-hidden />
-          Créer une fiche
-        </button>
+        <div className="empty-state__actions">
+          <button type="button" className="btn" onClick={() => setDialog({ kind: 'examples' })}>
+            Exemples de la suite
+          </button>
+          <button type="button" className="btn btn--primary" onClick={() => setDialog({ kind: 'project', project: null })}>
+            <Plus aria-hidden />
+            Créer une fiche
+          </button>
+        </div>
       </div>
     )
   } else if (overview && current && overview.project.id === current.id) {
@@ -220,7 +226,13 @@ function Hub() {
       <a className="sr-only" href="#contenu">
         Aller au contenu
       </a>
-      <Sidebar projects={projects} currentSlug={slug} loading={projectsLoading} onNewProject={() => setDialog({ kind: 'project', project: null })} onNavigate={() => setNavOpen(false)} />
+      <Sidebar projects={projects} currentSlug={slug} loading={projectsLoading} onNewProject={() => setDialog({ kind: 'project', project: null })}
+        onExamples={() => {
+          setNavOpen(false)
+          setDialog({ kind: 'examples' })
+        }}
+        onNavigate={() => setNavOpen(false)}
+      />
       <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />
       <div className="main-col">
         <Topbar title={title} navOpen={navOpen} onToggleNav={() => setNavOpen((o) => !o)}>
@@ -236,6 +248,28 @@ function Hub() {
         <LinkDialog overview={overview} initialApp={dialog.app} onClose={() => setDialog(null)} onChanged={() => void refresh()} />
       )}
       {dialog?.kind === 'source' && current && <SourceDialog projectId={current.id} onClose={() => setDialog(null)} onChanged={() => void refresh()} />}
+      {dialog?.kind === 'examples' && (
+        <ExamplesDialog
+          onClose={() => setDialog(null)}
+          onOpen={(target) => {
+            setDialog(null)
+            navigate(projectPath(target))
+            // La fiche peut avoir été créée ailleurs (autre onglet) : la liste est relue pour la trouver.
+            void loadProjects()
+          }}
+          onSaved={(saved, created) => {
+            flushSync(() => {
+              setDialog(null)
+              setProjects((list) => (list.some((p) => p.id === saved.id) ? list.map((p) => (p.id === saved.id ? saved : p)) : [...list, saved]))
+              navigate(projectPath(saved.slug))
+            })
+            // Une fiche qu'on ouvre est lue à son ouverture ; celle déjà à l'écran garde son identifiant : on la relit ici.
+            if (saved.id === currentId) void loadOverview(saved.id, true)
+            void loadProjects()
+            toast(created ? `Fiche « ${saved.name} » créée` : `Fiche « ${saved.name} » rattachée à ce que les apps ont chargé`)
+          }}
+        />
+      )}
       {dialog?.kind === 'project' && (
         <ProjectDialog
           project={dialog.project}

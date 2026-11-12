@@ -1,7 +1,7 @@
 // Accès à l'API du Hub. En mode « demo » (aperçu sans la suite), les lectures viennent de src/demo/snapshot.json
 // et les écritures sont refusées avec un message clair.
 
-import type { AppId, Catalog, HubLink, HubProject, LinkApp, Overview } from './types.ts'
+import type { AppId, Catalog, ExampleCatalog, HubLink, HubProject, LinkApp, Overview } from './types.ts'
 
 export interface ProjectInput {
   name?: string
@@ -32,6 +32,10 @@ export interface HubApi {
   addLink(projectId: number, input: LinkInput): Promise<HubLink>
   removeLink(projectId: number, linkId: number): Promise<void>
   catalog(app: AppId, q: string, signal?: AbortSignal): Promise<Catalog>
+  /** « Exemples de la suite » : histoires lues dans les apps, et où chacune est chargée. */
+  examples(signal?: AbortSignal): Promise<ExampleCatalog>
+  /** Crée la fiche de l'histoire, ou la remet sur ce que les apps ont chargé depuis. */
+  openExampleProject(storyId: string): Promise<HubProject>
 }
 
 export class ApiError extends Error {
@@ -73,4 +77,6 @@ export const httpApi: HubApi = {
   addLink: (projectId, input) => request('POST', `/api/projects/${projectId}/links`, input),
   removeLink: (projectId, linkId) => request('DELETE', `/api/projects/${projectId}/links/${linkId}`),
   catalog: (app, q, signal) => request('GET', `/api/catalog/${app}?q=${encodeURIComponent(q)}`, undefined, signal),
+  examples: (signal) => request('GET', '/api/exemples-suite', undefined, signal),
+  openExampleProject: (storyId) => request('POST', `/api/exemples-suite/${encodeURIComponent(storyId)}`),
 }

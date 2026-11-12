@@ -21,6 +21,19 @@ export function focusOnOpen<T>(root: { querySelector(selector: string): T | null
   return coarse ? null : root.querySelector(AUTOFOCUS)
 }
 
+/** Marque de l'élément qui reprend le focus quand le déclencheur d'une fenêtre n'est plus à l'écran (bouton du menu). */
+export const FOCUS_FALLBACK = '[data-focus-fallback]'
+
+/**
+ * Qui reprend le focus à la fermeture d'une fenêtre : son déclencheur ; s'il ne peut plus le prendre (entrée de la
+ * barre latérale, repliée au téléphone quand la fenêtre s'ouvre), le repli (bouton du menu). `take` pose le focus et
+ * dit s'il a été pris : un élément masqué ne le prend pas, et le focus ne reste jamais perdu sur la page.
+ */
+export function focusOnClose<T>(targets: readonly (T | null | undefined)[], take: (target: T) => boolean): T | null {
+  for (const target of targets) if (target && take(target)) return target
+  return null
+}
+
 /**
  * Entrée maintenue : la répétition de la touche qui a ouvert la fenêtre ne doit rien y activer (bouton, envoi du
  * formulaire). Dans une zone de texte, elle reste un retour à la ligne.
