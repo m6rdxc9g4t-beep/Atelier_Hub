@@ -220,7 +220,8 @@ function milestonesText(milestones: readonly Milestone[], today: string): string
   return sentences.join(' ')
 }
 
-function kpiFigures(k: Kpis): SlideFigure[] {
+/** Cartes des chiffres clés : les mêmes sur la diapositive « Chiffres clés » et dans les faits généraux donnés à l'IA. */
+export function kpiFigures(k: Kpis): SlideFigure[] {
   const ratio = percentText(k.hours_spent, k.hours_estimated)
   return [
     figure('Temps passé', hoursText(k.hours_spent), k.hours_estimated > 0 ? `sur ${hoursText(k.hours_estimated)} estimées${ratio ? ` · ${ratio}` : ''}` : 'aucune estimation'),

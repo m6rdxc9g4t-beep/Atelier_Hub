@@ -310,7 +310,7 @@ export interface SlideLive {
 
 export interface DeckSlide extends SlideRecord {
   live: SlideLive
-  /** Nombres d'un texte d'IA absents des chiffres du jour (toujours [] tant qu'aucun moteur ne rédige). */
+  /** « À relire » : nombres d'un texte rédigé par une IA qui ne figurent plus dans les chiffres du jour ([] pour tout autre texte). */
   stale: string[]
 }
 
