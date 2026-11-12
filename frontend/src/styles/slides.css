@@ -310,6 +310,40 @@
   font-weight: 500;
   color: var(--danger);
 }
+/* Notes d'un texte rédigé par une IA, sous lui : sa provenance (moteur, modèle, date) et, si un de ses nombres n'est
+   plus dans les chiffres du jour, « Texte à relire ». En lecture et en édition ; jamais en plein écran ni à
+   l'impression (une présentation montrée ne porte pas de note). */
+.slide__notes {
+  display: grid;
+  flex: none;
+  gap: 0.25em;
+  max-width: 84em;
+  margin-top: -0.55em;
+  font-size: 0.68em;
+  line-height: 1.4;
+}
+.slide__notes p {
+  margin: 0;
+}
+.slide__source {
+  color: var(--faint);
+}
+.slide__stale {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+  font-weight: 500;
+  color: var(--warning);
+}
+.slide__stale svg {
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  margin-top: 0.08em;
+}
+.presenter .slide__notes {
+  display: none;
+}
 .slide[data-state="down"] .slide__head .atelier-brand__tile {
   filter: grayscale(0.85);
   opacity: 0.55;
@@ -505,6 +539,10 @@
   .deck .slide-rows__more {
     font-size: 12.5px;
   }
+  .deck .slide__notes {
+    margin-top: -4px;
+    font-size: 12px;
+  }
   .deck .slide__foot {
     flex-wrap: wrap;
     gap: 4px 12px;
@@ -592,6 +630,10 @@
   font-weight: 500;
   color: var(--warning);
 }
+.slide-editor__stale {
+  font-weight: 500;
+  color: var(--warning);
+}
 .slide-editor__actions {
   display: flex;
   align-items: center;
@@ -637,6 +679,267 @@
   .slide-editor .field,
   .slide-add .field {
     font-size: 16px;
+  }
+}
+
+/* ── Rédaction par une IA ─────────────────────────────────────────────────────
+   Interrupteur « Hors ligne / En ligne » de la barre haute : neutre hors ligne (l'état nominal), teinté de la signature
+   en ligne — le libellé dit l'état, la couleur ne fait que le souligner. */
+.online-switch {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--ds-radius-md);
+  background: none;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+.online-switch:hover {
+  background: var(--surface-hover);
+  color: var(--app-text);
+}
+.online-switch[aria-checked="true"] {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.online-switch:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.online-switch svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+/* Choix du moteur : commande segmentée, modèle, puis la ligne bouclier (ce qui part). */
+.engine {
+  display: grid;
+  gap: 8px;
+}
+.engine .label {
+  margin: 0;
+}
+.engine__choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.engine__choices button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.engine__choices button:disabled:hover {
+  color: var(--app-muted);
+}
+.engine__note,
+.engine__shield {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--app-muted);
+}
+.engine__note svg,
+.engine__shield svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+}
+.engine__shield {
+  flex-wrap: wrap;
+  padding: 9px 11px;
+  border: 1px solid var(--app-line);
+  border-radius: var(--ds-radius-md);
+  background: var(--app-surface-2);
+}
+.engine__shield > p,
+.engine__sends {
+  flex: 1 1 0;
+  min-width: 12em;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.engine__sends p {
+  margin: 0;
+}
+/* Ce qui part vers Claude : une chose par ligne, pour être lu avant de lancer. */
+.engine__sends ul {
+  display: grid;
+  gap: 1px;
+  margin: 4px 0;
+  padding-left: 1.1em;
+}
+.engine__sends li::marker {
+  color: var(--faint);
+}
+.engine__shield[data-tone="warning"] p {
+  font-weight: 500;
+  color: var(--app-text);
+}
+.engine__shield[data-tone="warning"] svg {
+  color: var(--warning);
+}
+.engine__shield .btn {
+  flex: none;
+  margin-left: auto;
+}
+.engine__model {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+/* Fenêtre « Rédiger avec l'IA » : réglages, puis progression, puis bilan. */
+.write__intro,
+.write__note {
+  margin: 0 0 14px;
+  line-height: 1.5;
+  color: var(--app-muted);
+}
+.write__note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+}
+.write__scope {
+  margin: 0;
+}
+.write__count {
+  font-variant-numeric: tabular-nums;
+}
+.write .label__opt + .label__opt::before {
+  content: "· ";
+}
+.write textarea.field {
+  display: block;
+  min-height: 60px;
+}
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.check input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+.check__help {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--app-muted);
+}
+.write__progress {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.write__elapsed {
+  font-size: 12.5px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--app-muted);
+}
+.write__bar {
+  display: block;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 3px;
+  background: var(--surface-hover);
+  accent-color: var(--accent);
+  appearance: none;
+  -webkit-appearance: none;
+}
+.write__bar::-webkit-progress-bar {
+  background: var(--surface-hover);
+}
+.write__bar::-webkit-progress-value {
+  background: var(--accent);
+}
+.write__bar::-moz-progress-bar {
+  background: var(--accent);
+}
+.write__result {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.write__kept-title {
+  margin: 16px 0 4px;
+}
+.write__kept {
+  max-height: min(40vh, 280px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  border-top: 1px solid var(--app-line);
+}
+.write__kept li {
+  display: grid;
+  grid-template-columns: 2.2em minmax(0, 1fr);
+  gap: 0 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--app-line);
+  line-height: 1.45;
+}
+.write__kept-n {
+  grid-row: span 2;
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+}
+.write__kept-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.write__kept-reason {
+  grid-column: 2;
+  font-size: 12.5px;
+  color: var(--app-muted);
+  overflow-wrap: anywhere;
+}
+@media (pointer: coarse) {
+  .online-switch {
+    height: 40px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  .write .field {
+    font-size: 16px;
+  }
+  .check {
+    min-height: 40px;
+    align-items: center;
+  }
+  .check input {
+    width: 20px;
+    height: 20px;
+    margin: 0;
   }
 }
 
@@ -841,7 +1144,8 @@ dialog.presenter::backdrop {
   :root:has(.deck-page) dialog,
   .deck__head,
   .deck__add,
-  .slide-editor {
+  .slide-editor,
+  .slide__notes {
     display: none !important;
   }
   .shell:has(.deck-page),

@@ -6,6 +6,7 @@ import { flushSync } from 'react-dom'
 
 import { LinkDialog, ProjectDialog, SourceDialog } from './components/Dialogs.tsx'
 import { ExamplesDialog } from './components/ExamplesDialog.tsx'
+import { OnlineSwitch } from './components/OnlineSwitch.tsx'
 import { AboutDialog, Sidebar, Topbar } from './components/Shell.tsx'
 import { UiProvider, useUi } from './components/ui.tsx'
 import { localToday } from './lib/format.ts'
@@ -256,7 +257,14 @@ function Hub() {
       <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />
       <div className="main-col">
         <Topbar title={title} navOpen={navOpen} onToggleNav={() => setNavOpen((o) => !o)}>
-          {api.demo && <span className="demo-badge" title="Données d’exemple : rien n’est enregistré">Aperçu</span>}
+          {/* L'IA est désactivée en aperçu : pas d'interrupteur « Hors ligne / En ligne ». */}
+          {api.demo ? (
+            <span className="demo-badge" title="Données d’exemple : rien n’est enregistré">
+              Aperçu
+            </span>
+          ) : (
+            <OnlineSwitch />
+          )}
         </Topbar>
         <main id="contenu" className="main">
           {main}

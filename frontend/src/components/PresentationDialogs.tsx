@@ -1,6 +1,7 @@
 // Fenêtres des présentations : nouvelle présentation, renommer, ajouter une diapositive. Une fenêtre dit elle-même ce qui s'y passe : un échec
 // s'affiche au-dessus de ses boutons (une notification passerait sous la fenêtre).
 
+import { Sparkles } from 'lucide-react'
 import { useEffect, useId, useState, type FormEvent } from 'react'
 
 import { api } from '../lib/hub-api.ts'
@@ -24,7 +25,8 @@ export function NewPresentationDialog({
   project: HubProject
   today: string
   onClose: () => void
-  onCreated: (presentation: PresentationSummary) => void
+  /** `write` : « Créer et rédiger avec l'IA » — la présentation s'ouvre sur sa fenêtre de rédaction. */
+  onCreated: (presentation: PresentationSummary, write: boolean) => void
 }) {
   const [title, setTitle] = useState(() => defaultTitle(project.name, today, TITLE_MAX))
   const [plan, setPlan] = useState(true)
@@ -32,16 +34,22 @@ export function NewPresentationDialog({
   const [error, setError] = useState<string | null>(null)
   const ids = { title: useId(), help: useId() }
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault()
+  // Le plan est toujours bâti sans IA (complet, juste, le même que l'IA soit là ou non) : l'IA ne fait ensuite que
+  // commenter ses diapositives, et celles qu'elle rate gardent leur phrase automatique.
+  const create = async (write: boolean) => {
+    if (saving || !title.trim()) return
     setSaving(true)
     setError(null)
     try {
-      onCreated(await api.createPresentation(project.id, { title: title.trim(), plan }))
+      onCreated(await api.createPresentation(project.id, { title: title.trim(), plan }), write)
     } catch (failure) {
       setError(`La présentation n’a pas été créée : ${(failure as Error).message}`)
       setSaving(false)
     }
+  }
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    void create(false)
   }
 
   return (
@@ -76,9 +84,17 @@ export function NewPresentationDialog({
           <button type="button" className="btn" onClick={onClose}>
             Annuler
           </button>
-          <button type="submit" className="btn btn--primary" disabled={saving || !title.trim()}>
-            {saving ? 'Lecture de la fiche…' : 'Créer'}
-          </button>
+          <div className="dialog__group">
+            {plan && (
+              <button type="button" className="btn" disabled={saving || !title.trim()} onClick={() => void create(true)} title="Crée la présentation, puis ouvre « Rédiger avec l’IA » : tu choisis le moteur et tu vois ce qui part avant de lancer.">
+                <Sparkles aria-hidden />
+                Créer et rédiger avec l’IA
+              </button>
+            )}
+            <button type="submit" className="btn btn--primary" disabled={saving || !title.trim()}>
+              {saving ? 'Lecture de la fiche…' : 'Créer'}
+            </button>
+          </div>
         </div>
       </form>
     </Modal>
