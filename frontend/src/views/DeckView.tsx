@@ -1,8 +1,9 @@
 // Une présentation de la fiche : le Hub la rend résolue (ce qui est enregistré + les chiffres relus dans les apps).
 
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { ArrowLeft, FileDown, Play, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { Presenter } from '../components/Presenter.tsx'
 import { ReadError, ReadMissing } from '../components/ReadState.tsx'
 import { Slide } from '../components/Slide.tsx'
 import { useUi } from '../components/ui.tsx'
@@ -10,6 +11,7 @@ import { ApiError } from '../lib/api.ts'
 import { plural } from '../lib/format.ts'
 import { clockTime, shouldRefresh } from '../lib/freshness.ts'
 import { api } from '../lib/hub-api.ts'
+import { printDeck, printSession, printTitle, type PrintSession } from '../lib/print.ts'
 import { failureFeedback, refreshFailure } from '../lib/refresh.ts'
 import { href, onLinkClick, presentationsPath } from '../lib/router.ts'
 import type { Deck, HubProject } from '../lib/types.ts'
@@ -38,6 +40,10 @@ export function DeckView({
   const seq = useRef(0)
   const loadedAt = useRef<number | null>(null)
   const loading = useRef(false)
+  const [presenting, setPresenting] = useState(false)
+  const print = useRef<PrintSession | null>(null)
+  const printName = useRef('')
+  printName.current = deck ? printTitle(deck.presentation.title, deck.project.name) : ''
 
   /** `quiet` : la présentation reste affichée pendant la relecture, un échec se dit par un message (`failureFeedback`). */
   const load = useCallback(
@@ -94,6 +100,38 @@ export function DeckView({
     }
   }, [load])
 
+  // Impression : en clair, sous le nom « Titre — Fiche », que l'impression vienne du bouton ou du raccourci du
+  // navigateur (`beforeprint`) ; `afterprint` remet le thème et le titre de l'écran.
+  useEffect(() => {
+    const session = printSession(document, () => printName.current)
+    print.current = session
+    window.addEventListener('beforeprint', session.begin)
+    window.addEventListener('afterprint', session.end)
+    return () => {
+      window.removeEventListener('beforeprint', session.begin)
+      window.removeEventListener('afterprint', session.end)
+      session.end()
+      print.current = null
+    }
+  }, [])
+
+  const present = () => {
+    // Dans le geste du clic, et sur la page (jamais sur la fenêtre, jamais après une attente) : c'est le seul moment
+    // où le navigateur accorde le plein écran. S'il le refuse ou ne le connaît pas (iPhone), la présentation couvre
+    // quand même toute la page.
+    try {
+      void document.documentElement.requestFullscreen?.().catch(() => undefined)
+    } catch {
+      // Navigateur sans plein écran : rien à faire.
+    }
+    setPresenting(true)
+  }
+  const closePresenter = useCallback(() => setPresenting(false), [])
+
+  const exportPdf = () => {
+    if (print.current) printDeck(print.current, window)
+  }
+
   const list = presentationsPath(project.slug)
   const back = (
     <a className="back-link" href={href(list)} onClick={(e) => onLinkClick(e, list)}>
@@ -127,6 +165,7 @@ export function DeckView({
   }
 
   const readAt = clockTime(deck.generated_at)
+  const empty = deck.slides.length === 0
   return (
     <div className="project deck-page">
       <header className="project__head deck__head">
@@ -142,6 +181,14 @@ export function DeckView({
           <button type="button" className="btn btn--ghost btn--icon" aria-label="Actualiser" title={readAt ? `Relire les apps (lues à ${readAt})` : 'Relire les apps'} onClick={() => void load(true)} disabled={refreshing}>
             <RefreshCw className={refreshing ? 'spin' : undefined} />
           </button>
+          <button type="button" className="btn" onClick={exportPdf} disabled={empty} title="Ouvre l’impression du navigateur : choisis « Enregistrer au format PDF », en paysage.">
+            <FileDown aria-hidden />
+            Exporter en PDF
+          </button>
+          <button type="button" className="btn btn--primary" onClick={present} disabled={empty}>
+            <Play aria-hidden />
+            Présenter
+          </button>
         </div>
       </header>
 
@@ -152,6 +199,8 @@ export function DeckView({
           </li>
         ))}
       </ol>
+
+      {presenting && <Presenter deck={deck} startIndex={0} today={today} onClose={closePresenter} />}
     </div>
   )
 }

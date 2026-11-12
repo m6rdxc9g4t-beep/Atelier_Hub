@@ -510,3 +510,237 @@
     min-height: 40px;
   }
 }
+
+/* ── Plein écran « Présenter » ────────────────────────────────────────────────
+   Une fenêtre modale qui couvre toute la page (couche supérieure : au-dessus de la page passée en plein écran, ou de
+   la page telle quelle quand le navigateur ne l'accorde pas). La scène est un conteneur : la diapositive y tient en
+   16:9 quelle que soit la forme de l'écran, la barre du bas reste toujours visible. */
+dialog.presenter {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+dialog.presenter[open] {
+  display: flex;
+  flex-direction: column;
+}
+dialog.presenter::backdrop {
+  background: var(--app-bg);
+}
+.presenter__stage {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 0;
+  container-type: size;
+}
+/* La scène reçoit le focus par le code (les touches y arrivent) : ce n'est pas une commande, pas d'anneau. */
+.presenter__stage:focus,
+.presenter__stage:focus-visible {
+  outline: none;
+}
+.presenter .slide {
+  width: min(100cqw, 100cqh * 16 / 9);
+  border-radius: 0;
+}
+.presenter__empty {
+  margin: 0;
+  color: var(--app-muted);
+}
+.presenter__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  min-height: 44px;
+  padding: 4px 8px 4px 16px;
+  padding-bottom: max(4px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--app-line);
+}
+.presenter__note {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--app-muted);
+  overflow-wrap: anywhere;
+}
+.presenter__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+/* Touchers répétés pour avancer : pas d'éclair de surlignage du navigateur, le fond pressé du bouton suffit. */
+.presenter__nav .btn {
+  -webkit-tap-highlight-color: transparent;
+}
+.presenter__count {
+  min-width: 6ch;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--app-muted);
+  text-align: center;
+}
+@media (pointer: coarse) {
+  .presenter__nav .btn--icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Téléphone tenu debout : une boîte 16:9 y serait illisible. La diapositive prend l'écran, à une taille de texte
+   lisible, et défile si elle est longue. Couché, elle reste en 16:9. */
+@media screen and (max-width: 860px) and (orientation: portrait) {
+  .presenter__stage {
+    display: block;
+    overflow-y: auto;
+  }
+  .presenter .slide {
+    width: 100%;
+    min-height: 100cqh;
+    aspect-ratio: auto;
+    container-type: inline-size;
+    border: 0;
+  }
+  .presenter .slide__inner {
+    gap: 1em;
+    height: auto;
+    min-height: 100cqh;
+    padding: 7cqw 5cqw 4cqw;
+    font-size: clamp(14px, 4cqw, 22px);
+  }
+  .presenter .slide__title {
+    font-size: 1.35em;
+  }
+  .presenter .slide[data-kind="title"] .slide__title {
+    font-size: 1.9em;
+  }
+  .presenter .slide[data-kind="title"] .slide-text {
+    font-size: 1em;
+  }
+  .presenter .slide[data-kind="title"] .slide__foot {
+    position: static;
+  }
+  .presenter .slide__body,
+  .presenter .slide-list,
+  .presenter .slide-rows {
+    overflow: visible;
+  }
+  .presenter .slide__body {
+    flex: 1 0 auto;
+  }
+  .presenter .slide-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Une ligne par élément : libellé, puis statut, détail et date dessous. */
+  .presenter .slide-rows,
+  .presenter .slide-rows[data-status] {
+    display: block;
+    font-size: 1em;
+  }
+  .presenter .slide-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.1em 0.7em;
+  }
+  .presenter .slide-row > :empty {
+    display: none;
+  }
+  .presenter .slide-row__status {
+    order: 3;
+    font-weight: 400;
+    color: var(--app-muted);
+  }
+  .presenter .slide-row__label {
+    flex: 1 1 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .presenter .slide-row__detail,
+  .presenter .slide-row__date {
+    order: 4;
+    max-width: 100%;
+    font-size: 0.86em;
+  }
+  .presenter .slide__foot {
+    flex-wrap: wrap;
+    gap: 0.3em 1em;
+    font-size: 0.8em;
+  }
+}
+
+/* ── Impression (« Exporter en PDF ») ─────────────────────────────────────────
+   Une diapositive par page. La diapositive garde sa boîte d'écran (largeur de la page, 16:9) : aucune unité de
+   fenêtre, que Safari résout mal à l'impression. Page 16:9 plus 1 mm de marge basse : 297 × 9/16 = 167,06 mm, une
+   page de 167 mm déborderait sur une page blanche. La page est nommée : seule une présentation la prend, la fiche
+   s'imprime comme avant. Si le navigateur ignore la taille de page, on obtient une diapositive par page du format
+   choisi dans la fenêtre d'impression, jamais coupée. Le thème clair est posé par lib/print.ts. */
+@page deck {
+  size: 297mm 168mm;
+  margin: 0;
+}
+@media print {
+  :root:has(.deck-page),
+  :root:has(.deck-page) body {
+    background: var(--app-surface);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  :root:has(.deck-page) body,
+  .shell:has(.deck-page) {
+    min-height: 0;
+  }
+  .shell:has(.deck-page) .sidebar,
+  .shell:has(.deck-page) .sidebar-backdrop,
+  .shell:has(.deck-page) .topbar,
+  :root:has(.deck-page) .toasts,
+  :root:has(.deck-page) dialog,
+  .deck__head,
+  .deck__add,
+  .slide-editor {
+    display: none !important;
+  }
+  .shell:has(.deck-page),
+  .shell:has(.deck-page) .main-col,
+  .shell:has(.deck-page) .main,
+  .deck-page,
+  .deck {
+    display: block;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  .deck-page {
+    page: deck;
+  }
+  .deck__item {
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .deck__item:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  .deck .slide {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 0;
+    border-radius: 0;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

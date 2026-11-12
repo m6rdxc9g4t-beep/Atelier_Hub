@@ -29,6 +29,39 @@ describe('charte de la suite', () => {
     assert.match(css, /@media screen and \(max-width: 860px\)/)
   })
 
+  it('la feuille d’impression donne une diapositive par page, sans la coquille ni unité de fenêtre', () => {
+    const css = withoutComments(read('../styles/slides.css'))
+    // Page 16:9 plus 1 mm (297 × 9/16 = 167,06 mm : une page de 167 mm déborderait sur une page blanche), sans marge,
+    // et nommée : seule une présentation la prend.
+    assert.match(css, /@page deck\s*{\s*size:\s*297mm 168mm;\s*margin:\s*0;\s*}/)
+    const start = css.indexOf('@media print')
+    assert.ok(start >= 0, '@media print est déclaré')
+    const print = css.slice(start)
+    assert.equal(print.indexOf('@media', 1), -1, 'le bloc d’impression est le dernier de la feuille')
+    assert.match(print, /\.deck-page\s*{\s*page:\s*deck;/)
+    assert.match(print, /\.deck__item\s*{[^}]*break-after:\s*page;[^}]*page-break-after:\s*always;[^}]*break-inside:\s*avoid;/)
+    assert.match(print, /\.deck__item:last-child\s*{[^}]*break-after:\s*auto;/)
+    // La coquille, l'en-tête, l'édition et les fenêtres (dont le plein écran) ne s'impriment pas.
+    const hidden = print.match(/([^{}]*){\s*display:\s*none\s*!important;\s*}/)
+    assert.ok(hidden, 'une règle masque la coquille')
+    for (const selector of ['.sidebar', '.topbar', '.toasts', 'dialog', '.deck__head', '.deck__add', '.slide-editor']) assert.ok(hidden[1]!.includes(selector), `${selector} est masqué`)
+    // La diapositive garde sa boîte : largeur de la page, 16:9. Safari résout mal vw / vh à l'impression.
+    assert.match(print, /\.deck \.slide\s*{[^}]*width:\s*100%;[^}]*aspect-ratio:\s*16 \/ 9;/)
+    assert.doesNotMatch(print, /\d(?:d|s|l)?v(?:w|h|min|max)\b/, 'aucune unité de fenêtre à l’impression')
+    assert.match(print, /print-color-adjust:\s*exact;/)
+  })
+
+  it('le plein écran couvre la page et garde la diapositive en 16:9 dans sa scène', () => {
+    const css = withoutComments(read('../styles/slides.css'))
+    const dialog = css.match(/(?:^|})\s*dialog\.presenter\s*{([^}]*)}/)
+    assert.ok(dialog, 'dialog.presenter est déclaré')
+    for (const rule of [/inset:\s*0;/, /max-width:\s*none;/, /max-height:\s*none;/, /height:\s*100dvh;/]) assert.match(dialog[1]!, rule)
+    assert.match(css, /\.presenter__stage\s*{[^}]*container-type:\s*size;/)
+    assert.match(css, /\.presenter \.slide\s*{[^}]*width:\s*min\(100cqw, 100cqh \* 16 \/ 9\);/)
+    // Au doigt, la navigation du plein écran fait 44 px.
+    assert.match(css, /@media \(pointer: coarse\)\s*{\s*\.presenter__nav \.btn--icon\s*{\s*width:\s*44px;\s*height:\s*44px;/)
+  })
+
   it('les actions d’une fenêtre passent à la ligne au lieu de sortir de la fenêtre', () => {
     const css = withoutComments(read('../styles/hub.css'))
     for (const selector of ['.dialog__actions', '.dialog__group']) {
