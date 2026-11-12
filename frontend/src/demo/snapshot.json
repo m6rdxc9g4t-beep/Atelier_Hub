@@ -11,8 +11,8 @@
    "wiki_space_id": null,
    "wiki_space": null,
    "tab_project": null,
-   "created_at": "2026-11-12T15:14:59.530Z",
-   "updated_at": "2026-11-12T15:14:59.530Z",
+   "created_at": "2026-11-10T08:30:00.000Z",
+   "updated_at": "2026-11-10T08:30:00.000Z",
    "example": null
   },
   {
@@ -26,8 +26,8 @@
    "wiki_space_id": "7",
    "wiki_space": "KPI CGO",
    "tab_project": "KPI CGO",
-   "created_at": "2026-11-12T15:14:59.520Z",
-   "updated_at": "2026-11-12T15:14:59.529Z",
+   "created_at": "2026-11-10T08:30:00.000Z",
+   "updated_at": "2026-11-10T08:30:00.000Z",
    "example": null
   },
   {
@@ -41,8 +41,8 @@
    "wiki_space_id": "9",
    "wiki_space": "Studio Garance",
    "tab_project": "Compta 2026",
-   "created_at": "2026-11-12T15:14:59.557Z",
-   "updated_at": "2026-11-12T15:14:59.557Z",
+   "created_at": "2026-11-10T08:30:00.000Z",
+   "updated_at": "2026-11-10T08:30:00.000Z",
    "example": "studio-garance"
   }
  ],
@@ -59,8 +59,8 @@
     "wiki_space_id": "7",
     "wiki_space": "KPI CGO",
     "tab_project": "KPI CGO",
-    "created_at": "2026-11-12T15:14:59.520Z",
-    "updated_at": "2026-11-12T15:14:59.529Z",
+    "created_at": "2026-11-10T08:30:00.000Z",
+    "updated_at": "2026-11-10T08:30:00.000Z",
     "example": null
    },
    "links": [
@@ -629,7 +629,7 @@
      }
     ]
    },
-   "generated_at": "2026-11-12T15:14:59.567Z"
+   "generated_at": "2026-11-10T08:30:00.000Z"
   },
   "2": {
    "project": {
@@ -643,8 +643,8 @@
     "wiki_space_id": null,
     "wiki_space": null,
     "tab_project": null,
-    "created_at": "2026-11-12T15:14:59.530Z",
-    "updated_at": "2026-11-12T15:14:59.530Z",
+    "created_at": "2026-11-10T08:30:00.000Z",
+    "updated_at": "2026-11-10T08:30:00.000Z",
     "example": null
    },
    "links": [],
@@ -694,7 +694,7 @@
     "url": "http://127.0.0.1:3100/",
     "items": []
    },
-   "generated_at": "2026-11-12T15:14:59.568Z"
+   "generated_at": "2026-11-10T08:30:00.000Z"
   },
   "3": {
    "project": {
@@ -708,8 +708,8 @@
     "wiki_space_id": "9",
     "wiki_space": "Studio Garance",
     "tab_project": "Compta 2026",
-    "created_at": "2026-11-12T15:14:59.557Z",
-    "updated_at": "2026-11-12T15:14:59.557Z",
+    "created_at": "2026-11-10T08:30:00.000Z",
+    "updated_at": "2026-11-10T08:30:00.000Z",
     "example": "studio-garance"
    },
    "links": [],
@@ -985,7 +985,7 @@
      }
     ]
    },
-   "generated_at": "2026-11-12T15:14:59.567Z"
+   "generated_at": "2026-11-10T08:30:00.000Z"
   }
  },
  "catalogs": {
@@ -1510,8 +1510,8 @@
     "project_id": 1,
     "title": "KPI CGO — novembre 2026",
     "slides": 13,
-    "created_at": "2026-11-12T15:14:59.574Z",
-    "updated_at": "2026-11-12T15:14:59.574Z"
+    "created_at": "2026-11-10T08:30:00.000Z",
+    "updated_at": "2026-11-10T08:30:00.000Z"
    }
   ],
   "3": [
@@ -1520,8 +1520,8 @@
     "project_id": 3,
     "title": "Studio Garance — novembre 2026",
     "slides": 10,
-    "created_at": "2026-11-12T15:14:59.581Z",
-    "updated_at": "2026-11-12T15:14:59.581Z"
+    "created_at": "2026-11-10T08:30:00.000Z",
+    "updated_at": "2026-11-10T08:30:00.000Z"
    }
   ]
  },
@@ -1532,8 +1532,8 @@
     "project_id": 1,
     "title": "KPI CGO — novembre 2026",
     "slides": 13,
-    "created_at": "2026-11-12T15:14:59.574Z",
-    "updated_at": "2026-11-12T15:14:59.574Z"
+    "created_at": "2026-11-10T08:30:00.000Z",
+    "updated_at": "2026-11-10T08:30:00.000Z"
    },
    "project": {
     "id": 1,
@@ -1546,8 +1546,8 @@
     "wiki_space_id": "7",
     "wiki_space": "KPI CGO",
     "tab_project": "KPI CGO",
-    "created_at": "2026-11-12T15:14:59.520Z",
-    "updated_at": "2026-11-12T15:14:59.529Z",
+    "created_at": "2026-11-10T08:30:00.000Z",
+    "updated_at": "2026-11-10T08:30:00.000Z",
     "example": null
    },
    "slides": [
@@ -1563,7 +1563,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -1590,7 +1590,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -1611,13 +1611,13 @@
      "position": 2,
      "kind": "kpis",
      "title": null,
-     "body": null,
+     "body": "1 feature terminée sur 6 (17 %). 66,5 h passées sur 100 h estimées (67 %). Le détail est dans les chiffres de la diapositive, relus à chaque ouverture.",
      "ref": null,
      "ref_label": null,
-     "text_source": "auto",
-     "text_model": null,
-     "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "text_source": "ollama",
+     "text_model": "llama3.2:1b",
+     "text_at": "2026-11-10T08:30:00.000Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -1655,7 +1655,9 @@
       "auto_title": "Chiffres clés",
       "auto_text": "2 features terminées sur 6 (33 %). 66,5 h passées sur 100 h estimées (67 %)."
      },
-     "stale": []
+     "stale": [
+      "17 %"
+     ]
     },
     {
      "id": 4,
@@ -1663,13 +1665,13 @@
      "position": 3,
      "kind": "features",
      "title": null,
-     "body": null,
+     "body": "6 features : 2 terminées, 2 en cours, 2 à faire. Le détail est dans les chiffres de la diapositive, relus à chaque ouverture.",
      "ref": null,
      "ref_label": null,
-     "text_source": "auto",
-     "text_model": null,
-     "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "text_source": "ollama",
+     "text_model": "llama3.2:1b",
+     "text_at": "2026-11-10T08:30:00.000Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -1745,7 +1747,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -1815,13 +1817,13 @@
      "position": 5,
      "kind": "milestones",
      "title": null,
-     "body": null,
+     "body": "Prochain jalon : « Comité de pilotage », le 26 novembre 2026. 1 jalon atteint sur 3. Le détail est dans les chiffres de la diapositive, relus à chaque ouverture.",
      "ref": null,
      "ref_label": null,
-     "text_source": "auto",
-     "text_model": null,
-     "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "text_source": "ollama",
+     "text_model": "llama3.2:1b",
+     "text_at": "2026-11-10T08:30:00.000Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -1873,7 +1875,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -1941,7 +1943,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -1985,7 +1987,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2012,7 +2014,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2064,7 +2066,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2108,7 +2110,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2184,7 +2186,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.574Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2249,7 +2251,7 @@
      "stale": []
     }
    ],
-   "generated_at": "2026-11-12T15:14:59.576Z"
+   "generated_at": "2026-11-10T08:30:00.000Z"
   },
   "2": {
    "presentation": {
@@ -2257,8 +2259,8 @@
     "project_id": 3,
     "title": "Studio Garance — novembre 2026",
     "slides": 10,
-    "created_at": "2026-11-12T15:14:59.581Z",
-    "updated_at": "2026-11-12T15:14:59.581Z"
+    "created_at": "2026-11-10T08:30:00.000Z",
+    "updated_at": "2026-11-10T08:30:00.000Z"
    },
    "project": {
     "id": 3,
@@ -2271,8 +2273,8 @@
     "wiki_space_id": "9",
     "wiki_space": "Studio Garance",
     "tab_project": "Compta 2026",
-    "created_at": "2026-11-12T15:14:59.557Z",
-    "updated_at": "2026-11-12T15:14:59.557Z",
+    "created_at": "2026-11-10T08:30:00.000Z",
+    "updated_at": "2026-11-10T08:30:00.000Z",
     "example": "studio-garance"
    },
    "slides": [
@@ -2288,7 +2290,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.581Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2315,7 +2317,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.581Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2342,7 +2344,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.581Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2394,7 +2396,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.581Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2430,7 +2432,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.581Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2490,7 +2492,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.581Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2526,7 +2528,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.581Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2570,7 +2572,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.581Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2614,7 +2616,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.581Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2690,7 +2692,7 @@
      "text_source": "auto",
      "text_model": null,
      "text_at": null,
-     "updated_at": "2026-11-12T15:14:59.581Z",
+     "updated_at": "2026-11-10T08:30:00.000Z",
      "live": {
       "state": "ok",
       "message": null,
@@ -2723,7 +2725,7 @@
      "stale": []
     }
    ],
-   "generated_at": "2026-11-12T15:14:59.583Z"
+   "generated_at": "2026-11-10T08:30:00.000Z"
   }
  },
  "first": 1,
