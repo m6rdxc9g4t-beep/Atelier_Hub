@@ -34,6 +34,11 @@ describe('exemples de la suite', () => {
     assert.equal(loadedSummary([loaded, app({}), app({})]), 'Chargée dans 1 app sur 3')
     assert.equal(loadedSummary([loaded, loaded, app({ state: 'down' })]), 'Chargée dans 2 apps sur 3')
     assert.equal(loadedSummary([loaded, loaded]), 'Chargée dans toutes les apps')
+    // Une app qui ne livre pas l'histoire ne compte pas : rien ne peut y être chargé.
+    const unavailable = app({ state: 'unavailable' })
+    assert.equal(loadedSummary([loaded, app({}), unavailable]), 'Chargée dans 1 app sur 2')
+    assert.equal(loadedSummary([loaded, loaded, unavailable]), 'Chargée dans toutes les apps qui la livrent')
+    assert.equal(loadedSummary([app({}), unavailable]), 'Chargée dans aucune app pour l’instant')
   })
 
   it('chaque app dit son état ; le lien ouvre ce qui est chargé, sinon l’endroit où charger, jamais une app arrêtée', () => {
@@ -46,6 +51,19 @@ describe('exemples de la suite', () => {
     assert.equal(appLine(app({ detail: 'Tab n’a encore rien exporté sur cette machine' })).status, 'Pas chargée · Tab n’a encore rien exporté sur cette machine')
     assert.deepEqual(appLine(app({ app: 'nexus', state: 'down', detail: 'Atelier Nexus ne répond pas' })), { status: 'Atelier Nexus ne répond pas', link: null })
     assert.equal(appLine(app({ app: 'wiki', state: 'down' })).status, 'Atelier Wiki ne répond pas')
+  })
+
+  it('ne propose pas « Charger » vers une app qui ne livre pas l’histoire', () => {
+    const detail = 'Cette histoire n’est pas livrée avec cette app'
+    assert.deepEqual(appLine(app({ app: 'viz', state: 'unavailable', detail })), { status: detail, link: null })
+    assert.deepEqual(appLine(app({ app: 'viz', state: 'unavailable' })), { status: detail, link: null })
+    // « Pour le reste, charge l'histoire dans l'app » ne vaut que pour une app où elle peut être chargée.
+    const loaded = app({ state: 'loaded' })
+    const only = projectNote({ project: null, apps: [loaded, app({ app: 'viz', state: 'unavailable', detail })] }, false)
+    assert.doesNotMatch(only, /charge l’histoire dans l’app/)
+    assert.match(only, /^Chargée dans toutes les apps qui la livrent : la fiche rassemble ce qui est chargé\.$/)
+    const mixed = projectNote({ project: null, apps: [loaded, app({}), app({ app: 'viz', state: 'unavailable', detail })] }, false)
+    assert.match(mixed, /^Chargée dans 1 app sur 2 : .*charge l’histoire dans l’app, puis reviens ici\.$/)
   })
 
   it('dit ce que la fiche rassemble, et que retirer l’exemple du Hub = supprimer la fiche', () => {

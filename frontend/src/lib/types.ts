@@ -190,15 +190,18 @@ export interface Catalog {
   candidates: Candidate[]
 }
 
-/** loaded : l'histoire est chargée dans l'app · absent : pas encore · down : l'app ne répond pas (on ne sait pas). */
-export type ExampleAppState = 'loaded' | 'absent' | 'down'
+/**
+ * loaded : l'histoire est chargée dans l'app · absent : pas encore, elle peut l'être · unavailable : l'app répond
+ * mais ne livre pas cette histoire (rien à y charger) · down : l'app ne répond pas (on ne sait pas).
+ */
+export type ExampleAppState = 'loaded' | 'absent' | 'unavailable' | 'down'
 
 export interface ExampleApp {
   app: AppId
   state: ExampleAppState
-  /** Ce que l'app a chargé (« Projet « … » »), ou pourquoi on ne le sait pas. */
+  /** Ce que l'app a chargé (« Projet « … » »), ou pourquoi on ne le sait pas, ou pourquoi rien ne s'y charge. */
   detail: string | null
-  /** Ce qui est chargé, sinon l'endroit de l'app où l'on charge l'exemple (le Hub ne le charge pas lui-même). */
+  /** Ce qui est chargé, sinon l'endroit de l'app où l'on charge l'exemple (le Hub ne le charge pas lui-même) ; l'accueil de l'app quand elle ne livre pas l'histoire. */
   url: string
 }
 

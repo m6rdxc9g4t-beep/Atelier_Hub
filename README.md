@@ -26,7 +26,7 @@ Le Hub ne recopie aucune donnée : il garde des **références** (projet Projets
 Au pied de la barre latérale, « Exemples de la suite » ouvre les histoires fictives qui traversent la suite (Studio Garance, Rénovation Urbaine 2026… générées par `Atelier_Deploy/exemples`). Le Hub n'en livre aucune et n'en charge aucune : elles vivent dans les apps, qui les chargent chacune de leur côté. Le Hub, lui :
 
 1. **lit** ce que chaque app en dit (lecture seule, en parallèle, délai borné) et montre, pour l'histoire choisie, où elle est chargée : Convert, Tab, Viz, Nexus, Projets, Wiki. Une app arrêtée le dit sur sa ligne, sans gêner les autres. (Trésorerie fait partie du parcours des histoires, mais le Hub ne la lit pas.)
-2. **ouvre l'app** : « Ouvrir » mène à ce qui est chargé (le projet, la page d'entrée du Wiki, les jeux de Viz, l'historique de Convert), « Charger » à l'endroit de l'app où l'on charge l'exemple. Au retour sur l'onglet, la fenêtre relit les apps.
+2. **ouvre l'app** : « Ouvrir » mène à ce qui est chargé (le projet, la page d'entrée du Wiki, les jeux de Viz, l'historique de Convert), « Charger » à l'endroit de l'app où l'on charge l'exemple. Une app qui répond mais ne livre pas l'histoire (dépôt pas encore mis à jour) le dit sur sa ligne, sans lien « Charger » : rien ne peut y être chargé. Au retour sur l'onglet, la fenêtre relit les apps.
 3. **crée la fiche** de l'histoire (« Créer la fiche ») : une fiche ordinaire, à son nom, rattachée à ce que les apps ont chargé. Si une app charge l'histoire plus tard (ou si tu as changé depuis un rattachement de la fiche à la main), le bouton devient « Mettre à jour la fiche » ; sinon « Ouvrir la fiche ». Une seule fiche par histoire, marquée « Exemple ».
 
 Retirer l'exemple du Hub, c'est supprimer cette fiche (Modifier → Supprimer la fiche) : les apps gardent ce qu'elles ont chargé, chacune le retire de son côté.
@@ -115,8 +115,8 @@ Tab (app de bureau) n'a pas d'adresse par table : le clic ouvre Tab. Toutes ces 
 | `GET /api/projects/:id/overview` | Vue d'ensemble (panneaux, chiffres clés) |
 | `POST /api/projects/:id/links`, `DELETE /api/projects/:id/links/:linkId` | Épingler / retirer (`app` : `wiki`, `viz`, `tab`, `convert`, `nexus`, `source`) |
 | `GET /api/catalog/:app?q=` | Ce qu'une app propose de rattacher ou d'épingler |
-| `GET /api/exemples-suite` | Histoires d'exemple lues dans les apps : où chacune est chargée (`loaded` / `absent` / `down`), lien vers l'app, fiche du Hub si elle existe |
-| `POST /api/exemples-suite/:histoire` | Crée la fiche de l'histoire (201) ou la remet sur ce que les apps ont chargé depuis (200) ; les apps sont relues, rien n'y est écrit. Pas de `DELETE` : la fiche se supprime comme une autre |
+| `GET /api/exemples-suite` | Histoires d'exemple lues dans les apps : où chacune est chargée (`loaded` / `absent` / `unavailable` : l'app ne livre pas cette histoire, rien à y charger / `down`), lien vers l'app, fiche du Hub si elle existe |
+| `POST /api/exemples-suite/:histoire` | Sans corps (tout champ est refusé, 422). Crée la fiche de l'histoire (201) ou la remet sur ce que les apps ont chargé depuis (200) ; les apps sont relues, rien n'y est écrit. Pas de `DELETE` : la fiche se supprime comme une autre |
 | `GET /api/health` | `{ status: "ok", app: "atelier-hub" }` |
 
 Erreurs `{ detail, code }` en français. Gardes Host / Origin comme le Wiki (hôte inconnu ou écriture d'une autre origine → 403).

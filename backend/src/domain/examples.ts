@@ -89,7 +89,7 @@ function storiesOf(reads: SuiteExamples): StoryInfo[] {
   return [...seen.values()]
 }
 
-/** État d'une app qui liste ses histoires : arrêtée, histoire non livrée, chargée ou non. */
+/** État d'une app qui liste ses histoires : arrêtée, histoire non livrée (rien à y charger), chargée ou non. */
 function appState<T extends StoryInfo>(
   app: AppId,
   read: Read<T[]>,
@@ -99,7 +99,7 @@ function appState<T extends StoryInfo>(
 ): ExampleApp {
   if (!read.ok) return { app, state: 'down', detail: read.message, url: home }
   const story = read.value.find((s) => s.id === storyId)
-  if (!story) return { app, state: 'absent', detail: NOT_DELIVERED, url: home }
+  if (!story) return { app, state: 'unavailable', detail: NOT_DELIVERED, url: home }
   const found = loaded(story)
   return found ? { app, state: 'loaded', ...found } : { app, state: 'absent', detail: null, url: home }
 }
@@ -115,7 +115,7 @@ export function assembleExamples(reads: SuiteExamples, ui: Readonly<Record<AppId
     let convert: ExampleApp
     if (!reads.convert.ok) convert = { app: 'convert', state: 'down', detail: reads.convert.message, url: deepLinks.convertHome(ui.convert) }
     else if (!reads.convert.value.stories.some((s) => s.id === info.id)) {
-      convert = { app: 'convert', state: 'absent', detail: NOT_DELIVERED, url: deepLinks.convertHome(ui.convert) }
+      convert = { app: 'convert', state: 'unavailable', detail: NOT_DELIVERED, url: deepLinks.convertHome(ui.convert) }
     } else {
       // Les conversions d'un exemple portent le titre de l'histoire (« Relevé octobre 2026 — Studio Garance »).
       const keyword = [normalize(info.title)].filter(Boolean)

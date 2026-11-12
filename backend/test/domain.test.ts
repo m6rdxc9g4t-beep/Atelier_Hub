@@ -156,18 +156,21 @@ describe('exemples de la suite', () => {
     assert.deepEqual(stories[0]!.bindings, {}, 'des conversions ne rattachent rien : la fiche les trouve par mots-clés')
   })
 
-  it('une histoire qu’une app ne livre pas n’y est pas « à charger » sans le dire', () => {
+  it('une histoire qu’une app ne livre pas n’y est pas « à charger » : état à part, distinct de « pas chargée »', () => {
     const other = { ...info, id: 'autre', title: 'Autre' }
     const stories = assembleExamples(
       reads({
         wiki: { ok: true, value: [{ ...info, loaded: false, space_id: null, space_name: null, page_id: null }] },
         viz: { ok: true, value: [{ ...other, loaded: true, datasets: 2 }] },
+        convert: { ok: true, value: { stories: [other], conversions: ['Relevé — Studio Garance'] } },
       }),
       ui,
     )
     assert.deepEqual(stories.map((s) => s.story.id), ['autre', 'studio-garance'])
     const garance = stories[1]!.story.apps
-    assert.deepEqual([garance.find((a) => a.app === 'viz')!.state, garance.find((a) => a.app === 'viz')!.detail], ['absent', 'Cette histoire n’est pas livrée avec cette app'])
+    assert.deepEqual([garance.find((a) => a.app === 'viz')!.state, garance.find((a) => a.app === 'viz')!.detail], ['unavailable', 'Cette histoire n’est pas livrée avec cette app'])
+    // Convert aussi, même si une conversion porte le titre de l'histoire : il ne la livre pas, rien ne s'y charge.
+    assert.deepEqual([garance.find((a) => a.app === 'convert')!.state, garance.find((a) => a.app === 'convert')!.detail], ['unavailable', 'Cette histoire n’est pas livrée avec cette app'])
     assert.deepEqual([garance.find((a) => a.app === 'wiki')!.state, garance.find((a) => a.app === 'wiki')!.detail], ['absent', null])
   })
 

@@ -29,24 +29,29 @@ export function projectAction(story: Pick<ExampleStory, 'project'>, readOnly: bo
   return { kind: 'update', label: 'Mettre à jour la fiche', blocked: false }
 }
 
-/** « Chargée dans 4 apps sur 6 » : ce que la fiche aura à rassembler. */
+/**
+ * « Chargée dans 4 apps sur 6 » : ce que la fiche aura à rassembler. Une app qui ne livre pas l'histoire
+ * (`unavailable`) ne compte pas : rien ne peut y être chargé.
+ */
 export function loadedSummary(apps: readonly ExampleApp[]): string {
-  const loaded = apps.filter((a) => a.state === 'loaded').length
+  const delivering = apps.filter((a) => a.state !== 'unavailable')
+  const loaded = delivering.filter((a) => a.state === 'loaded').length
   if (loaded === 0) return 'Chargée dans aucune app pour l’instant'
-  if (loaded === apps.length) return 'Chargée dans toutes les apps'
-  return `Chargée dans ${loaded} app${loaded > 1 ? 's' : ''} sur ${apps.length}`
+  if (loaded === delivering.length) return delivering.length === apps.length ? 'Chargée dans toutes les apps' : 'Chargée dans toutes les apps qui la livrent'
+  return `Chargée dans ${loaded} app${loaded > 1 ? 's' : ''} sur ${delivering.length}`
 }
 
 export interface AppLine {
-  /** « Chargée », « Pas chargée », ou le message d'une app qui ne répond pas. */
+  /** « Chargée », « Pas chargée », « Pas livrée avec cette app », ou le message d'une app qui ne répond pas. */
   status: string
-  /** Lien vers l'app : ce qui est chargé, ou l'endroit où l'on charge. Aucun vers une app arrêtée. */
+  /** Lien vers l'app : ce qui est chargé, ou l'endroit où l'on charge. Aucun vers une app arrêtée, ni vers une app qui ne livre pas l'histoire (rien à y charger). */
   link: { label: string; title: string } | null
 }
 
 export function appLine(app: ExampleApp): AppLine {
   const name = `Atelier ${APP_SHORT[app.app]}`
   if (app.state === 'down') return { status: app.detail ?? `${name} ne répond pas`, link: null }
+  if (app.state === 'unavailable') return { status: app.detail ?? 'Cette histoire n’est pas livrée avec cette app', link: null }
   if (app.state === 'loaded') return { status: app.detail ?? 'Chargée', link: { label: 'Ouvrir', title: `Ouvrir dans ${name}` } }
   return {
     status: app.detail ? `Pas chargée · ${app.detail}` : 'Pas chargée',
