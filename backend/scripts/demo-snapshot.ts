@@ -42,6 +42,10 @@ const cloture = await call<HubProject>('POST', '/api/projects', {
   description: 'Calendrier et pièces de la clôture des comptes.',
 })
 
+// Fiche d'une histoire des « Exemples de la suite » : celle que le double a chargée dans toutes les apps.
+await call<HubProject>('POST', '/api/exemples-suite/studio-garance')
+const examples = await call('GET', '/api/exemples-suite')
+
 const projects = await call<HubProject[]>('GET', '/api/projects')
 const overviews = Object.fromEntries(
   await Promise.all(projects.map(async (p) => [p.id, await call(`GET`, `/api/projects/${p.id}/overview`)] as const)),
@@ -52,6 +56,6 @@ const catalogs = Object.fromEntries(
 
 const out = resolve(import.meta.dirname, '..', '..', 'frontend', 'src', 'demo')
 mkdirSync(out, { recursive: true })
-writeFileSync(resolve(out, 'snapshot.json'), `${JSON.stringify({ projects, overviews, catalogs, first: kpi.id, other: cloture.id }, null, 1)}\n`)
+writeFileSync(resolve(out, 'snapshot.json'), `${JSON.stringify({ projects, overviews, catalogs, examples, first: kpi.id, other: cloture.id }, null, 1)}\n`)
 await app.close()
 console.log(`Aperçu écrit : ${resolve(out, 'snapshot.json')}`)

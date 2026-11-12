@@ -6,6 +6,7 @@
 const enc = encodeURIComponent
 
 export const deepLinks = {
+  projetsHome: (ui: string) => `${ui}/`,
   projetsProject: (ui: string, projectId: string) => `${ui}/?projet=${enc(projectId)}`,
   projetsItem: (ui: string, projectId: string, itemId: string) => `${ui}/?projet=${enc(projectId)}&element=${enc(itemId)}`,
   wikiHome: (ui: string) => `${ui}/`,
@@ -13,6 +14,7 @@ export const deepLinks = {
   vizHome: (ui: string) => `${ui}/#/`,
   vizReport: (ui: string, reportId: string) => `${ui}/#/rapports/${enc(reportId)}`,
   vizData: (ui: string) => `${ui}/#/donnees`,
+  convertHome: (ui: string) => `${ui}/#/`,
   convertHistory: (ui: string) => `${ui}/#/historique`,
   convertItem: (ui: string, conversionId: string) => `${ui}/#/conversions/${enc(conversionId)}`,
   tabHome: (ui: string) => `${ui}/`,

@@ -3,9 +3,11 @@
 import type { FastifyInstance } from 'fastify'
 
 import type { Db } from '../db/database.js'
+import { EXAMPLE_ID } from '../domain/examples.js'
 import { SOURCE_KINDS } from '../domain/types.js'
 import { invalid } from '../http/errors.js'
 import { buildCatalog, isAppId } from '../services/catalog.js'
+import { buildExamples, openExampleProject } from '../services/examples.js'
 import { buildOverview, type SuiteContext } from '../services/overview.js'
 import { addLink, createProject, deleteProject, getProject, listProjects, removeLink, updateProject, type LinkInput, type ProjectInput } from '../services/projects.js'
 
@@ -91,6 +93,20 @@ export function hubRoutes(app: FastifyInstance, db: Db, suite: SuiteContext): vo
       const target = request.params.app
       if (!isAppId(target)) throw invalid(`App inconnue : ${target}`)
       return buildCatalog(suite, target, request.query.q ?? '')
+    },
+  )
+
+  // « Exemples de la suite » : les histoires lues dans les apps ; POST crée (201) ou remet à jour (200) la fiche de
+  // l'histoire dans le Hub. Pas de DELETE : la fiche d'exemple se supprime comme une autre.
+  app.get('/api/exemples-suite', async () => buildExamples(db, suite))
+
+  app.post<{ Params: { histoire: string } }>(
+    '/api/exemples-suite/:histoire',
+    { schema: { params: { type: 'object', required: ['histoire'], properties: { histoire: { type: 'string', pattern: EXAMPLE_ID } } } } },
+    async (request, reply) => {
+      const { project, created } = await openExampleProject(db, suite, request.params.histoire)
+      reply.code(created ? 201 : 200)
+      return project
     },
   )
 }

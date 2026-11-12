@@ -40,6 +40,11 @@ const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX links_project ON links(project_id, app);
   `,
+  // 2 — fiche d'une histoire des « Exemples de la suite » : une seule fiche par histoire
+  `
+  ALTER TABLE projects ADD COLUMN example TEXT;
+  CREATE UNIQUE INDEX projects_example ON projects(example) WHERE example IS NOT NULL;
+  `,
 ]
 
 export function migrate(db: Db): void {

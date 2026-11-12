@@ -4,7 +4,7 @@ import { after, describe, it } from 'node:test'
 import { buildApp } from '../src/app.js'
 import { loadConfig, type HubConfig } from '../src/config.js'
 import { openDatabase } from '../src/db/database.js'
-import type { Catalog, HubLink, HubProject, Overview } from '../src/domain/types.js'
+import type { Catalog, ExampleCatalog, HubLink, HubProject, Overview } from '../src/domain/types.js'
 import { fakeAppsConfig, fakeSuite, type FakeSuiteOptions } from './fixtures/suite.js'
 
 const apps: Awaited<ReturnType<typeof buildApp>>[] = []
@@ -172,7 +172,7 @@ describe('catalogue « Lier »', () => {
   it('propose les rattachements et les éléments de chaque app', async () => {
     const { call } = await setup()
     const projets = await call<Catalog>('GET', '/api/catalog/projets')
-    assert.deepEqual(projets.body.candidates.map((c) => [c.kind, c.label, c.bind]), [['project', 'KPI CGO', true], ['project', 'Refonte du site', true]])
+    assert.deepEqual(projets.body.candidates.map((c) => [c.kind, c.label, c.bind]), [['project', 'KPI CGO', true], ['project', 'Refonte du site', true], ['project', 'Gestion 2026 — Studio Garance', true]])
     const tab = await call<Catalog>('GET', '/api/catalog/tab?q=kpi')
     assert.deepEqual(tab.body.candidates.map((c) => c.kind), ['project', 'table', 'table', 'table'])
     const wiki = await call<Catalog>('GET', '/api/catalog/wiki?q=marge')
@@ -185,5 +185,138 @@ describe('catalogue « Lier »', () => {
     const res = await call<Catalog>('GET', '/api/catalog/nexus')
     assert.equal(res.body.state, 'down')
     assert.match(res.body.message ?? '', /Atelier Nexus ne répond pas/)
+  })
+})
+
+describe('exemples de la suite', () => {
+  const story = (catalog: ExampleCatalog, id: string) => {
+    const found = catalog.stories.find((s) => s.id === id)
+    assert.ok(found, `histoire ${id}`)
+    return found
+  }
+  const states = (catalog: ExampleCatalog, id: string) => Object.fromEntries(story(catalog, id).apps.map((a) => [a.app, a.state]))
+
+  it('liste les histoires lues dans les apps et dit où chacune est chargée', async () => {
+    const { call, suite } = await setup()
+    const { status, body } = await call<ExampleCatalog>('GET', '/api/exemples-suite')
+    assert.equal(status, 200)
+    assert.equal(body.state, 'ok')
+    assert.deepEqual(body.stories.map((s) => [s.id, s.title, s.sector]), [
+      ['studio-garance', 'Studio Garance', 'Compta'],
+      ['renovation-urbaine', 'Rénovation Urbaine 2026', 'Chantier'],
+      ['app-ecommerce', 'App E-Commerce v2', 'Produit'],
+    ])
+    // Chargée partout : chaque app dit ce qu'elle a chargé et le lien ouvre l'élément.
+    assert.deepEqual(story(body, 'studio-garance').apps.map((a) => [a.app, a.state, a.detail, a.url]), [
+      ['convert', 'loaded', '2 conversions', 'http://127.0.0.1:8010/#/historique'],
+      ['tab', 'loaded', 'Projet «\u00a0Compta 2026\u00a0» · 2 tables', 'http://127.0.0.1:4175/'],
+      ['viz', 'loaded', '2 jeux de données', 'http://127.0.0.1:8000/#/donnees'],
+      ['nexus', 'loaded', '2 workflows', 'http://127.0.0.1:3100/'],
+      ['projets', 'loaded', 'Projet «\u00a0Gestion 2026 — Studio Garance\u00a0»', 'http://127.0.0.1:4174/?projet=12'],
+      ['wiki', 'loaded', 'Espace «\u00a0Studio Garance\u00a0»', 'http://127.0.0.1:3200/p/61'],
+    ])
+    // Chargée en partie, puis nulle part : le lien ouvre l'app là où l'on charge l'exemple.
+    assert.deepEqual(states(body, 'renovation-urbaine'), { convert: 'loaded', tab: 'absent', viz: 'loaded', nexus: 'absent', projets: 'absent', wiki: 'absent' })
+    assert.deepEqual(story(body, 'app-ecommerce').apps.map((a) => [a.state, a.url]), [
+      ['absent', 'http://127.0.0.1:8010/#/'],
+      ['absent', 'http://127.0.0.1:4175/'],
+      ['absent', 'http://127.0.0.1:8000/#/'],
+      ['absent', 'http://127.0.0.1:3100/'],
+      ['absent', 'http://127.0.0.1:4174/'],
+      ['absent', 'http://127.0.0.1:3200/'],
+    ])
+    assert.ok(body.stories.every((s) => s.project === null))
+    // Lecture seule : aucune écriture dans une app (la recherche du Wiki est le seul POST que le Hub envoie).
+    assert.ok(suite.calls.length > 0 && suite.calls.every((c) => c.startsWith('GET ')), suite.calls.join(', '))
+  })
+
+  it('crée la fiche de l’histoire, rattachée à ce que les apps ont chargé', async () => {
+    const { call, suite } = await setup()
+    const created = await call<HubProject>('POST', '/api/exemples-suite/studio-garance')
+    assert.equal(created.status, 201)
+    const p = created.body
+    assert.deepEqual(
+      [p.name, p.slug, p.keywords, p.example, p.projets_id, p.projets_name, p.wiki_space_id, p.wiki_space, p.tab_project],
+      ['Studio Garance', 'studio-garance', 'Studio Garance', 'studio-garance', '12', 'Gestion 2026 — Studio Garance', '9', 'Studio Garance', 'Compta 2026'],
+    )
+    assert.match(p.description, /Exemple de la suite Atelier \(données fictives\)\.$/)
+    assert.ok(suite.calls.every((c) => c.startsWith('GET ')), 'créer la fiche n’écrit dans aucune app')
+
+    // La fiche montre tout de suite l'exemple rassemblé.
+    const { body } = await call<Overview>('GET', `/api/projects/${p.id}/overview`)
+    assert.equal(body.projets.project_name, 'Gestion 2026 — Studio Garance')
+    assert.equal(body.projets.items_total, 4)
+    assert.deepEqual(body.wiki.items.map((d) => d.title).sort(), ['Bilan octobre 2026', 'Bilan septembre 2026', 'Fournisseurs', 'Parcours de l’exemple'])
+    assert.deepEqual(body.tab.items.map((t) => t.id).sort(), ['tbl_ex_studio-garance_0', 'tbl_ex_studio-garance_1'])
+    assert.deepEqual(body.viz.items.map((r) => r.name), ['Exemple — Studio Garance'])
+    assert.deepEqual(body.sources.items.map((s) => s.label), ['Studio Garance — opérations août-oct. 2026', 'Studio Garance — Clients et factures'])
+    assert.deepEqual(body.convert.items.map((c) => c.name), ['Opérations catégorisées — Studio Garance', 'Relevé octobre 2026 — Studio Garance'])
+
+    // Une seule fiche par histoire : un second appel la rend telle quelle.
+    const again = await call<HubProject>('POST', '/api/exemples-suite/studio-garance')
+    assert.equal(again.status, 200)
+    assert.equal(again.body.id, p.id)
+    assert.equal(again.body.updated_at, p.updated_at)
+    const listed = (await call<ExampleCatalog>('GET', '/api/exemples-suite')).body
+    assert.deepEqual(story(listed, 'studio-garance').project, { id: p.id, slug: 'studio-garance', name: 'Studio Garance', current: true })
+    // Une fiche ordinaire du même nom n'est pas la fiche de l'exemple.
+    const plain = await call<HubProject>('POST', '/api/projects', { name: 'App E-Commerce v2' })
+    assert.equal(plain.body.example, null)
+    assert.equal(story((await call<ExampleCatalog>('GET', '/api/exemples-suite')).body, 'app-ecommerce').project, null)
+  })
+
+  it('remet la fiche sur ce qu’une app a chargé depuis, sans toucher au reste', async () => {
+    const { call, suite } = await setup()
+    const created = await call<HubProject>('POST', '/api/exemples-suite/renovation-urbaine')
+    assert.equal(created.status, 201)
+    assert.deepEqual([created.body.projets_id, created.body.wiki_space_id, created.body.tab_project], [null, null, null])
+    const id = created.body.id
+    await call('PATCH', `/api/projects/${id}`, { tab_project: 'Mon chantier', description: 'Notes à moi' })
+
+    suite.loaded.projets.add('renovation-urbaine')
+    const stale = story((await call<ExampleCatalog>('GET', '/api/exemples-suite')).body, 'renovation-urbaine')
+    assert.equal(stale.project?.current, false)
+
+    const updated = await call<HubProject>('POST', '/api/exemples-suite/renovation-urbaine')
+    assert.equal(updated.status, 200)
+    assert.deepEqual(
+      [updated.body.id, updated.body.projets_id, updated.body.projets_name, updated.body.wiki_space_id, updated.body.tab_project, updated.body.description],
+      [id, '13', 'Rénovation Urbaine 2026', null, 'Mon chantier', 'Notes à moi'],
+    )
+    assert.equal(story((await call<ExampleCatalog>('GET', '/api/exemples-suite')).body, 'renovation-urbaine').project?.current, true)
+
+    // Retirer l'exemple du Hub = supprimer la fiche, comme une autre ; l'histoire redevient « à créer ».
+    assert.equal((await call('DELETE', `/api/projects/${id}`)).status, 204)
+    assert.equal(story((await call<ExampleCatalog>('GET', '/api/exemples-suite')).body, 'renovation-urbaine').project, null)
+    assert.ok(suite.calls.every((c) => c.startsWith('GET ')))
+  })
+
+  it('une app arrêtée ne casse rien : son état est dit, la fiche se crée avec le reste', async () => {
+    const { call } = await setup({ down: new Set(['projets', 'nexus']), noTab: true })
+    const { body } = await call<ExampleCatalog>('GET', '/api/exemples-suite')
+    assert.equal(body.state, 'ok')
+    const garance = story(body, 'studio-garance')
+    assert.deepEqual(states(body, 'studio-garance'), { convert: 'loaded', tab: 'absent', viz: 'loaded', nexus: 'down', projets: 'down', wiki: 'loaded' })
+    assert.match(garance.apps.find((a) => a.app === 'projets')?.detail ?? '', /Atelier Projets ne répond pas/)
+    assert.match(garance.apps.find((a) => a.app === 'tab')?.detail ?? '', /rien exporté/)
+    const created = await call<HubProject>('POST', '/api/exemples-suite/studio-garance')
+    assert.equal(created.status, 201)
+    assert.deepEqual([created.body.projets_id, created.body.wiki_space_id, created.body.tab_project], [null, '9', null])
+  })
+
+  it('refuse une histoire inconnue, un identifiant mal formé, et dit quand aucune app ne répond', async () => {
+    const { call } = await setup()
+    const unknown = await call<{ code: string }>('POST', '/api/exemples-suite/inconnue')
+    assert.deepEqual([unknown.status, unknown.body.code], [404, 'NOT_FOUND'])
+    assert.equal((await call('POST', '/api/exemples-suite/Pas%20Un%20Id')).status, 422)
+    assert.equal((await call('POST', '/api/exemples-suite/studio-garance', undefined, { origin: 'https://evil.example' })).status, 403)
+    assert.equal((await call<HubProject[]>('GET', '/api/projects')).body.length, 0)
+
+    const off = await setup({ down: new Set(['projets', 'wiki', 'viz', 'convert', 'nexus']) })
+    const listed = await off.call<ExampleCatalog>('GET', '/api/exemples-suite')
+    assert.deepEqual([listed.status, listed.body.state, listed.body.stories.length], [200, 'down', 0])
+    assert.match(listed.body.message ?? '', /Aucune app de la suite ne répond/)
+    const refused = await off.call<{ code: string }>('POST', '/api/exemples-suite/studio-garance')
+    assert.deepEqual([refused.status, refused.body.code], [503, 'SUITE_DOWN'])
   })
 })

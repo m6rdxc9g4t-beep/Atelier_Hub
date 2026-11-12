@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import Database from 'better-sqlite3'
+
+import { migrate } from '../src/db/database.js'
+import { assembleExamples, exampleProjectInput, isCurrent, type SuiteExamples } from '../src/domain/examples.js'
 import { matchesKeywords, normalize, parseKeywords, sameName, slugify } from '../src/domain/match.js'
 import { agentReasons, rankAgents } from '../src/domain/relevance.js'
 import { activeItems, computeKpis, sortFeatures, workItemFromRow } from '../src/domain/summary.js'
 import { readAtelierTable } from '../src/domain/table.js'
 import type { WorkItem } from '../src/domain/types.js'
+import { findExampleProject } from '../src/services/projects.js'
 
 const item = (over: Partial<WorkItem>): WorkItem => ({
   id: '1',
@@ -132,5 +137,77 @@ describe('agents pertinents', () => {
         ['chef_de_projet', 2, false],
       ],
     )
+  })
+})
+
+describe('exemples de la suite', () => {
+  const info = { id: 'studio-garance', title: 'Studio Garance', subtitle: 'Clôture', sector: 'Compta', summary: 'Un studio clôture son mois.' }
+  const ui = { projets: 'http://p', wiki: 'http://w', viz: 'http://v', convert: 'http://c', nexus: 'http://n', tab: 'http://t' }
+  const down = { ok: false as const, message: 'Atelier X ne répond pas' }
+  const reads = (over: Partial<SuiteExamples>): SuiteExamples => ({ projets: down, wiki: down, viz: down, convert: down, nexus: down, tab: { ok: true, value: null }, ...over })
+  const app = (stories: ReturnType<typeof assembleExamples>, id: string) => stories[0]!.story.apps.find((a) => a.app === id)!
+
+  it('reconnaît les conversions d’une histoire à son titre, en mots entiers, sans casse ni accents', () => {
+    const stories = assembleExamples(
+      reads({ convert: { ok: true, value: { stories: [info], conversions: ['Relevé octobre 2026 — STUDIO GARANCE', 'Studio Garancebis', 'Studio de Garance', 'releve_studio_garance.pdf'] } } }),
+      ui,
+    )
+    assert.deepEqual([app(stories, 'convert').state, app(stories, 'convert').detail], ['loaded', '2 conversions'])
+    assert.deepEqual(stories[0]!.bindings, {}, 'des conversions ne rattachent rien : la fiche les trouve par mots-clés')
+  })
+
+  it('une histoire qu’une app ne livre pas n’y est pas « à charger » sans le dire', () => {
+    const other = { ...info, id: 'autre', title: 'Autre' }
+    const stories = assembleExamples(
+      reads({
+        wiki: { ok: true, value: [{ ...info, loaded: false, space_id: null, space_name: null, page_id: null }] },
+        viz: { ok: true, value: [{ ...other, loaded: true, datasets: 2 }] },
+      }),
+      ui,
+    )
+    assert.deepEqual(stories.map((s) => s.story.id), ['autre', 'studio-garance'])
+    const garance = stories[1]!.story.apps
+    assert.deepEqual([garance.find((a) => a.app === 'viz')!.state, garance.find((a) => a.app === 'viz')!.detail], ['absent', 'Cette histoire n’est pas livrée avec cette app'])
+    assert.deepEqual([garance.find((a) => a.app === 'wiki')!.state, garance.find((a) => a.app === 'wiki')!.detail], ['absent', null])
+  })
+
+  it('ne rattache que par identifiant : une app qui dit « chargé » sans identifiant ne rattache rien', () => {
+    const stories = assembleExamples(
+      reads({
+        projets: { ok: true, value: [{ ...info, loaded: true, project_id: null, project_name: 'Gestion 2026' }] },
+        tab: { ok: true, value: [{ table_id: 'tbl_ex_studio-garance_0', project: 'Compta 2026' }, { table_id: 'tbl_ex_studio-garance-bis_0', project: 'Autre' }] },
+      }),
+      ui,
+    )
+    assert.deepEqual(stories[0]!.bindings, { tab_project: 'Compta 2026' })
+    assert.equal(app(stories, 'projets').url, 'http://p/')
+    assert.equal(app(stories, 'tab').detail, 'Projet «\u00a0Compta 2026\u00a0» · 1 table')
+    assert.equal(isCurrent({ projets_id: null, wiki_space_id: null, tab_project: 'compta 2026' }, stories[0]!.bindings), true)
+    assert.equal(isCurrent({ projets_id: '4', wiki_space_id: null, tab_project: null }, stories[0]!.bindings), false)
+  })
+
+  it('la fiche d’une histoire prend son titre pour nom et pour mot-clé', () => {
+    assert.deepEqual(exampleProjectInput(info, { projets_id: '12', projets_name: 'Gestion' }), {
+      name: 'Studio Garance',
+      description: 'Un studio clôture son mois. Exemple de la suite Atelier (données fictives).',
+      keywords: 'Studio Garance',
+      projets_id: '12',
+      projets_name: 'Gestion',
+    })
+  })
+})
+
+describe('base', () => {
+  it('une base d’avant les exemples reçoit la colonne sans perdre ses fiches', () => {
+    const db = new Database(':memory:')
+    db.exec(`CREATE TABLE projects (id INTEGER PRIMARY KEY, slug TEXT NOT NULL UNIQUE, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', keywords TEXT NOT NULL DEFAULT '',
+      projets_id TEXT, projets_name TEXT, wiki_space_id TEXT, wiki_space TEXT, tab_project TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+      INSERT INTO projects (slug, name, created_at, updated_at) VALUES ('kpi-cgo', 'KPI CGO', '2026-11-01', '2026-11-01');`)
+    db.pragma('user_version = 1')
+    migrate(db)
+    assert.deepEqual(db.prepare('SELECT name, example FROM projects').all(), [{ name: 'KPI CGO', example: null }])
+    assert.equal(findExampleProject(db, 'studio-garance'), null)
+    db.prepare(`INSERT INTO projects (slug, name, example, created_at, updated_at) VALUES ('a', 'A', 'studio-garance', '', '')`).run()
+    assert.throws(() => db.prepare(`INSERT INTO projects (slug, name, example, created_at, updated_at) VALUES ('b', 'B', 'studio-garance', '', '')`).run(), /UNIQUE/)
   })
 })

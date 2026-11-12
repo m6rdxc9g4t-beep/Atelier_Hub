@@ -8,9 +8,9 @@ import { join } from 'node:path'
 import { num, readAtelierTable, str, type Row } from '../domain/table.js'
 import { AppUnavailable, requestJson, type HttpContext } from './http.js'
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+export const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
-function list(value: unknown, what: string): Record<string, unknown>[] {
+export function list(value: unknown, what: string): Record<string, unknown>[] {
   if (!Array.isArray(value)) throw new AppUnavailable('error', `réponse inattendue (${what})`)
   return value.filter(isRecord)
 }

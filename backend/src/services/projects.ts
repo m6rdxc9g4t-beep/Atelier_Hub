@@ -65,25 +65,32 @@ function freeSlug(db: Db, name: string, exceptId: number | null): string {
   return slug
 }
 
-export function createProject(db: Db, input: ProjectInput): HubProject {
+/** Fiche créée pour une histoire des « Exemples de la suite » (une seule par histoire), sinon `null`. */
+export function findExampleProject(db: Db, example: string): HubProject | null {
+  return (db.prepare('SELECT * FROM projects WHERE example = ?').get(example) as HubProject | undefined) ?? null
+}
+
+/** `example` : l'histoire d'exemple dont la fiche est la fiche (jamais fourni par une requête : voir services/examples.ts). */
+export function createProject(db: Db, input: ProjectInput, example: string | null = null): HubProject {
   const name = clean(input.name, 120, 'Nom')
   if (!name) throw invalid('Le nom de la fiche est obligatoire')
   const stamp = now()
   const info = db
     .prepare(
-      `INSERT INTO projects (slug, name, description, keywords, projets_id, projets_name, wiki_space_id, wiki_space, tab_project, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO projects (slug, name, description, keywords, projets_id, projets_name, wiki_space_id, wiki_space, tab_project, example, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       freeSlug(db, name, null),
       name,
       clean(input.description, 2000, 'Description') ?? '',
       clean(input.keywords, 500, 'Mots-clés') ?? '',
-      clean(input.projets_id, 80, 'Projet') ,
+      clean(input.projets_id, 80, 'Projet'),
       clean(input.projets_name, 200, 'Projet'),
       clean(input.wiki_space_id, 80, 'Espace'),
       clean(input.wiki_space, 200, 'Espace'),
       clean(input.tab_project, 200, 'Projet Tab'),
+      example,
       stamp,
       stamp,
     )
