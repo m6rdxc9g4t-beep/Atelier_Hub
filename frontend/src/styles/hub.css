@@ -1087,6 +1087,36 @@ dialog.dialog::backdrop {
   color: var(--app-muted);
   line-height: 1.5;
 }
+.panel__note {
+  margin: -6px 0 0;
+  padding: 0 14px 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--app-muted);
+}
+/* Projet rattaché sans feature : ce qu'il contient, ce qu'il faut créer, le lien vers Projets. */
+.projets-contents {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  padding: 12px 14px 16px;
+}
+.projets-contents p {
+  margin: 0;
+  line-height: 1.5;
+}
+.projets-contents__lead {
+  font-weight: 500;
+}
+.projets-contents__line {
+  font-variant-numeric: tabular-nums;
+}
+.projets-contents__next {
+  color: var(--app-muted);
+}
+.projets-contents__open {
+  margin-top: 4px;
+}
 .panel__head .segmented button {
   white-space: nowrap;
 }
@@ -1566,6 +1596,31 @@ dialog.dialog::backdrop {
   padding: 12px;
   margin: 0;
 }
+.picks__empty {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+.picks__empty p {
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+.picks__empty p + p {
+  font-size: 12px;
+}
+/* « Nouvelle fiche » : liste des projets d'Atelier Projets, le choisi en fond de sélection. */
+.from-projets {
+  max-height: 208px;
+  margin-top: 0;
+  padding: 4px 0;
+}
+.pick[aria-pressed='true'] {
+  background: var(--accent-soft);
+}
+.pick[aria-pressed='true'] .pick__state {
+  color: var(--accent-ink);
+}
 .picks__heading {
   display: flex;
   align-items: center;
@@ -1762,31 +1817,6 @@ dialog.dialog::backdrop {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.chip {
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--ds-radius-md);
-  background: var(--app-surface);
-  font-size: 13px;
-  cursor: pointer;
-}
-.chip:hover {
-  background: var(--surface-hover);
-}
-.chip[aria-pressed="true"] {
-  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
-  background: var(--accent-soft);
 }
 
 /* ── États de la page ────────────────────────────────────────────────────── */
