@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import { absentClaude } from '../src/ai/claude.js'
@@ -55,14 +56,15 @@ describe('migration 4 : réglages', () => {
 
 describe('réglages de l’IA', () => {
   const env = (more: Record<string, string>) => loadConfig({ HUB_STATIC_DIR: '', ...more }).ai
+  const CLAUDE_HOME = join(loadConfig({ HUB_STATIC_DIR: '' }).dataDir, 'claude-forfait')
 
   it('Ollama par défaut, sur cette machine', () => {
-    assert.deepEqual(env({}), { ollamaUrl: 'http://127.0.0.1:11434', ollamaRefused: null, ollamaModel: 'llama3.1:8b', ollamaTimeoutMs: 120_000, ollamaNumCtx: 8192, claudeCli: 'claude', claudeTimeoutMs: 180_000, maxChars: 12_000 })
+    assert.deepEqual(env({}), { ollamaUrl: 'http://127.0.0.1:11434', ollamaRefused: null, ollamaModel: 'llama3.1:8b', ollamaTimeoutMs: 120_000, ollamaNumCtx: 8192, claudeCli: 'claude', claudeTimeoutMs: 180_000, claudeToken: null, claudeHome: CLAUDE_HOME, maxChars: 12_000 })
     assert.equal(env({ OLLAMA_URL: 'http://localhost:11500/' }).ollamaUrl, 'http://localhost:11500')
     assert.equal(env({ OLLAMA_BASE_URL: 'http://[::1]:11434' }).ollamaUrl, 'http://[::1]:11434')
     assert.equal(env({ OLLAMA_URL: 'http://127.0.0.1:1', OLLAMA_BASE_URL: 'http://127.0.0.1:2' }).ollamaUrl, 'http://127.0.0.1:1')
     assert.deepEqual(env({ OLLAMA_MODEL: 'llama3.2:1b', OLLAMA_TIMEOUT_MS: '600000', OLLAMA_NUM_CTX: '4096', HUB_AI_MAX_CHARS: '6000' }), {
-      ollamaUrl: 'http://127.0.0.1:11434', ollamaRefused: null, ollamaModel: 'llama3.2:1b', ollamaTimeoutMs: 600_000, ollamaNumCtx: 4096, claudeCli: 'claude', claudeTimeoutMs: 180_000, maxChars: 6000,
+      ollamaUrl: 'http://127.0.0.1:11434', ollamaRefused: null, ollamaModel: 'llama3.2:1b', ollamaTimeoutMs: 600_000, ollamaNumCtx: 4096, claudeCli: 'claude', claudeTimeoutMs: 180_000, claudeToken: null, claudeHome: CLAUDE_HOME, maxChars: 6000,
     })
     // Seule l'origine est gardée : ni identifiants ni chemin ne passent dans un message d'erreur.
     assert.equal(env({ OLLAMA_URL: 'http://moi:secret@127.0.0.1:11434/v1' }).ollamaUrl, 'http://127.0.0.1:11434')

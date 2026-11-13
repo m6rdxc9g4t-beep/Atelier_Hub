@@ -32,7 +32,7 @@ export function createAi(config: AiConfig): AiDeps {
   return {
     ollama: config.ollamaUrl ? createOllamaClient({ baseUrl: config.ollamaUrl, timeoutMs: config.ollamaTimeoutMs, contextTokens: config.ollamaNumCtx }) : null,
     ollamaRefused: config.ollamaRefused,
-    claude: createClaudeEngine({ command: config.claudeCli, timeoutMs: config.claudeTimeoutMs }),
+    claude: createClaudeEngine({ command: config.claudeCli, timeoutMs: config.claudeTimeoutMs, token: config.claudeToken, privateHome: config.claudeHome }),
     model: config.ollamaModel,
     maxChars: config.maxChars,
   }

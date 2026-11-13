@@ -2,10 +2,11 @@
 // simulé : aucun test ne lance la vraie CLI (le seul processus lancé est un script shell écrit par le test).
 
 import assert from 'node:assert/strict'
-import { existsSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
+import { inspect } from 'node:util'
 
 import {
   claudeArguments,
@@ -17,11 +18,15 @@ import {
   formatConversation,
   parseResult,
   spawnRunner,
+  TOKEN_NO_CLI,
+  TOKEN_REFUSED,
+  tokenFailure,
   type ClaudeEngineOptions,
 } from '../src/ai/claude.js'
+import { ClaudeToken, forgetSecrets, readClaudeToken, scrubSecrets } from '../src/ai/claude-token.js'
 import { claudeFallbackDirs, executableNames, findClaudeExecutable, resolveClaudeLaunch, searchDirs, sessionPath } from '../src/ai/claude-find.js'
 import { WRITE_SYSTEM, writeSchema } from '../src/ai/prompts.js'
-import { loadConfig } from '../src/config.js'
+import { loadConfig, loadStartupConfig } from '../src/config.js'
 import type { AiStatus, PresentationSummary, SlideKind, WriteResult } from '../src/domain/types.js'
 import { createAi } from '../src/services/ai.js'
 import { listSlides } from '../src/services/presentations.js'
@@ -424,5 +429,135 @@ describe('Claude : exécutant réel, sur un script du test', () => {
     assert.equal((await failure(spawnRunner(slow, [], { input: null, cwd: dir, env: {}, timeoutMs: 5000, signal: already.signal }))).kind, 'cancelled')
     assert.ok(Date.now() - started < 4000, 'personne n’attend la fin du processus')
     assert.equal((await failure(spawnRunner(join(dir, 'absent', 'claude'), [], { input: null, cwd: dir, env: {}, timeoutMs: 1000 }))).kind, 'failed')
+  })
+})
+
+describe('Claude par le jeton du forfait (HUB_CLAUDE_OAUTH_TOKEN)', () => {
+  const SECRET = 'sk-ant-oat01-JETON-DU-FORFAIT-0123456789'
+  const token = new ClaudeToken(SECRET)
+  const home = join(dir, 'donnees', 'claude-forfait')
+  /** Ce que la CLI reçoit en mode jeton : la liste blanche, le dossier privé à la place de celui de l'utilisateur, le jeton. */
+  const TOKEN_ENV_OF_CLI = { ...CLI_ENV, HOME: home, CLAUDE_CONFIG_DIR: join(home, '.claude'), CLAUDE_CODE_OAUTH_TOKEN: SECRET }
+  const tokenEngine = (runner: ScriptedRunner, more: ClaudeEngineOptions = {}) => engineOf(runner, { token, privateHome: home, ...more })
+
+  it('réglage lu une fois, retiré de l’environnement du processus avec les secrets Anthropic ; jamais montré', () => {
+    const env: Record<string, string | undefined> = {
+      HUB_STATIC_DIR: '',
+      HUB_DATA_DIR: join(dir, 'donnees'),
+      HUB_CLAUDE_OAUTH_TOKEN: ` ${SECRET} `,
+      CLAUDE_CODE_OAUTH_TOKEN: 'sk-ant-oat01-JETON-HERITE',
+      ANTHROPIC_API_KEY: 'sk-ant-api03-CLE',
+      ANTHROPIC_AUTH_TOKEN: 'autre',
+      PATH: '/usr/bin',
+    }
+    const config = loadStartupConfig(env)
+    assert.equal(config.ai.claudeToken?.reveal(), SECRET)
+    assert.equal(config.ai.claudeHome, home)
+    assert.deepEqual(env, { HUB_STATIC_DIR: '', HUB_DATA_DIR: join(dir, 'donnees'), PATH: '/usr/bin' })
+    for (const shown of [JSON.stringify(config), inspect(config, { depth: 10 }), String(config.ai.claudeToken), `${config.ai.claudeToken}`]) {
+      assert.ok(!shown.includes('JETON-DU-FORFAIT'), shown)
+    }
+    // Vide ou absent : pas de mode jeton.
+    assert.equal(loadConfig({ HUB_STATIC_DIR: '', HUB_CLAUDE_OAUTH_TOKEN: '  ' }).ai.claudeToken, null)
+    assert.equal(createAi(config.ai).claude.mode, 'token')
+    assert.equal(createAi(loadConfig({ HUB_STATIC_DIR: '' }).ai).claude.mode, 'cli')
+    const other: Record<string, string> = { hub_claude_oauth_token: SECRET, Anthropic_Api_Key: 'x', HOME: '/home/moi' }
+    assert.equal(readClaudeToken(other)?.reveal(), SECRET, 'noms sans casse, comme sous Windows')
+    forgetSecrets(other)
+    assert.deepEqual(other, { HOME: '/home/moi' })
+  })
+
+  it('disponible = exécutable + jeton : « claude auth status » n’est jamais lancé ; CLI absente : la raison', async () => {
+    const runner = scriptedRunner()
+    const engine = tokenEngine(runner)
+    assert.equal(engine.mode, 'token')
+    assert.deepEqual(await engine.status({ refresh: true }), { available: true, installed: true, error: null, warning: null })
+    assert.equal(runner.calls.length, 0)
+    const absent = tokenEngine(runner, { command: join(dir, 'absent', 'claude') })
+    assert.deepEqual(await absent.status(), { available: false, installed: false, error: TOKEN_NO_CLI, warning: null })
+    assert.match(TOKEN_NO_CLI, /installe-le dans l’image, ou renseigne son chemin absolu \(CLAUDE_CLI\)$/)
+    assert.deepEqual(await failure(absent.chatJson(ask())).then((e) => [e.kind, e.message]), ['unavailable', TOKEN_NO_CLI])
+    assert.equal(runner.calls.length, 0)
+    assert.throws(() => createClaudeEngine({ token }), /dossier privé/)
+  })
+
+  it('mêmes arguments que le mode habituel ; le jeton seulement dans l’environnement de la CLI, dossier privé en 0700', posixOnly, async () => {
+    const runner = scriptedRunner([written([1, KPIS_TEXT]), written([1, KPIS_TEXT])])
+    await tokenEngine(runner).chatJson(ask('FAIT-RECONNAISSABLE'))
+    await engineOf(runner).chatJson(ask('FAIT-RECONNAISSABLE'))
+    const [byToken, bySession] = runner.calls
+    assert.deepEqual(byToken!.args, bySession!.args, 'mêmes drapeaux d’isolation')
+    assert.ok(!byToken!.args.join('\n').includes(SECRET), 'jamais en argument')
+    assert.equal(byToken!.options.input, 'FAIT-RECONNAISSABLE')
+    assert.deepEqual(byToken!.options.env, TOKEN_ENV_OF_CLI)
+    // Sans jeton, rien ne change : ni jeton (pas même celui hérité du processus), ni dossier privé.
+    assert.deepEqual(bySession!.options.env, CLI_ENV)
+    assert.deepEqual([byToken!.cwdEntries, existsSync(byToken!.options.cwd)], [[], false])
+    for (const folder of [home, join(home, '.claude')]) assert.equal(statSync(folder).mode & 0o777, 0o700)
+  })
+
+  it('jeton refusé ou expiré : la raison en français, Claude grisé jusqu’à « Vérifier à nouveau » ; le jeton n’est jamais repris', async () => {
+    let time = 1_000_000
+    const runner = scriptedRunner([failed(`Invalid bearer token ${SECRET}`), { stdout: '', code: 1, stderr: 'API Error: 401 {"error":"authentication_error"}' }, written([1, KPIS_TEXT])])
+    const engine = tokenEngine(runner, { now: () => time })
+    const first = await failure(engine.chatJson(ask()))
+    assert.deepEqual([first.kind, first.message], ['unavailable', TOKEN_REFUSED])
+    assert.match(TOKEN_REFUSED, /refais « claude setup-token » et mets à jour le jeton du serveur \(HUB_CLAUDE_OAUTH_TOKEN\)/)
+    assert.deepEqual(await engine.status(), { available: false, installed: true, error: TOKEN_REFUSED, warning: null })
+    time += CLAUDE_STATUS_REFRESH_MIN_MS
+    assert.equal((await engine.status({ refresh: true })).available, true)
+    assert.deepEqual(await failure(engine.chatJson(ask())).then((e) => [e.kind, e.message]), ['unavailable', TOKEN_REFUSED])
+    time += CLAUDE_STATUS_REFRESH_MIN_MS
+    await engine.status({ refresh: true })
+    assert.equal(await engine.chatJson(ask()), JSON.stringify({ diapositives: [{ n: 1, texte: KPIS_TEXT }] }))
+    assert.equal((await engine.status()).available, true)
+  })
+
+  it('limite du forfait : le message de la CLI repris sans secret ; autre erreur : masquée elle aussi', async () => {
+    const runner = scriptedRunner([failed(`Claude AI usage limit reached|1767225600 (jeton ${SECRET})`), failed(`Prompt is too long (sk-ant-api03-AUTRECLE99)`), { stdout: `boom ${SECRET}`, code: 1 }])
+    const engine = tokenEngine(runner)
+    const limit = await failure(engine.chatJson(ask()))
+    assert.equal(limit.kind, 'failed')
+    assert.equal(limit.message, 'Limite d’utilisation du forfait Claude atteinte (ou service saturé) — Claude Code répond : « Claude AI usage limit reached|1767225600 (jeton [jeton masqué]) ». Le forfait est partagé entre les apps de la suite : réessaie plus tard, ou passe sur Ollama')
+    assert.equal((await engine.status()).available, true, 'une limite ne grise pas Claude')
+    assert.deepEqual(await failure(engine.chatJson(ask())).then((e) => e.message), 'Erreur de Claude : Prompt is too long ([jeton masqué])')
+    assert.deepEqual(await failure(engine.chatJson(ask())).then((e) => e.message), 'Réponse illisible de Claude CLI : boom [jeton masqué]')
+    assert.equal(tokenFailure('Overloaded'.toLowerCase())?.kind, 'failed')
+    assert.equal(tokenFailure('La réponse compte 401 mots'), null, 'un nombre n’est pas un statut 401')
+    assert.equal(scrubSecrets(`a ${SECRET} b`, token), 'a [jeton masqué] b')
+  })
+
+  it('dans le Hub : hors ligne rien n’est lancé ; en ligne Claude rédige, refus et limite dits sans jeton, « Auto » repasse par Ollama', async () => {
+    const runner = scriptedRunner([written([1, KPIS_TEXT]), failed(`OAuth token has expired ${SECRET}`), failed('5-hour limit reached ∙ resets 3pm')])
+    let time = 1_000_000
+    const ctx = await setup(runner, { token, privateHome: home, now: () => time })
+    const offline = (await ctx.call<AiStatus>('GET', '/api/ai/status?refresh=true')).body
+    assert.deepEqual([offline.claude.mode, offline.claude.available, offline.auto], ['token', false, 'ollama'])
+    const refused = await ctx.write<Failure>({ slide_ids: [ctx.of('kpis').id], engine: 'claude' })
+    assert.deepEqual([refused.status, refused.body.code], [403, 'CLAUDE_OFFLINE'])
+    assert.equal(runner.calls.length, 0, 'hors ligne, la CLI n’est même pas lancée')
+
+    await ctx.online()
+    const status = await ctx.call<AiStatus>('GET', '/api/ai/status')
+    assert.deepEqual([status.body.claude.mode, status.body.claude.available, status.body.auto], ['token', true, 'claude'])
+    const ok = await ctx.write({ slide_ids: [ctx.of('kpis').id], engine: 'claude' })
+    assert.deepEqual([ok.status, ok.body.engine, ok.body.written.length], [200, 'claude', 1])
+    assert.equal(runner.asks()[0]!.options.env.CLAUDE_CODE_OAUTH_TOKEN, SECRET)
+
+    const expired = await ctx.write<Failure>({ slide_ids: [ctx.of('kpis').id], engine: 'claude', overwrite_manual: true })
+    assert.deepEqual([expired.status, expired.body], [502, { detail: TOKEN_REFUSED, code: 'CLAUDE_UNAVAILABLE' }])
+    const after = (await ctx.call<AiStatus>('GET', '/api/ai/status')).body
+    assert.deepEqual([after.claude.available, after.claude.error, after.auto], [false, TOKEN_REFUSED, 'ollama'])
+    ctx.ollama.script.push(JSON.stringify({ diapositives: [{ n: 1, texte: KPIS_TEXT }] }))
+    assert.equal((await ctx.write({ slide_ids: [ctx.of('kpis').id], overwrite_manual: true })).body.engine, 'ollama')
+
+    // « Vérifier à nouveau » (au plus toutes les 10 s) redonne sa chance au jeton.
+    assert.equal((await ctx.call<AiStatus>('GET', '/api/ai/status?refresh=true')).body.claude.available, false, 'pas avant 10 s')
+    time += CLAUDE_STATUS_REFRESH_MIN_MS
+    assert.equal((await ctx.call<AiStatus>('GET', '/api/ai/status?refresh=true')).body.claude.available, true)
+    const limit = await ctx.write<Failure>({ slide_ids: [ctx.of('kpis').id], engine: 'claude', overwrite_manual: true })
+    assert.deepEqual([limit.status, limit.body.code], [502, 'AI_ERROR'])
+    assert.match(limit.body.detail, /^Limite d’utilisation du forfait Claude atteinte .*« 5-hour limit reached ∙ resets 3pm »/)
+    for (const response of [status, ok, expired, limit]) assert.ok(!JSON.stringify(response.body).includes('JETON-DU-FORFAIT'))
   })
 })

@@ -1,8 +1,9 @@
 import { buildApp } from './app.js'
-import { loadConfig } from './config.js'
+import { loadStartupConfig } from './config.js'
 import { openDatabase } from './db/database.js'
 
-const config = loadConfig()
+// Le jeton du forfait Claude est lu ici, une fois, puis retiré de l'environnement du processus.
+const config = loadStartupConfig()
 const db = openDatabase(config.dataDir)
 const app = await buildApp({ config, db, logger: true })
 
