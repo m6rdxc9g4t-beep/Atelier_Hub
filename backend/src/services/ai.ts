@@ -3,7 +3,7 @@
 // Hors ligne (défaut), rien ne part vers Claude : son état n'est même pas demandé (la CLI n'est pas lancée), une
 // demande explicite est refusée (403), « Auto » retient Ollama.
 
-import { absentClaude, ClaudeError, DEFAULT_CLAUDE_MODEL, type ClaudeEngine } from '../ai/claude.js'
+import { ClaudeError, createClaudeEngine, DEFAULT_CLAUDE_MODEL, type ClaudeEngine } from '../ai/claude.js'
 import type { ChatMessage } from '../ai/data.js'
 import { createOllamaClient, findInstalledModel, missingModel, OllamaError, type OllamaClient } from '../ai/ollama.js'
 import { WRITE_TEMPERATURE } from '../ai/prompts.js'
@@ -24,12 +24,15 @@ export interface AiDeps {
   maxChars: number
 }
 
-/** Les vrais moteurs, d'après les réglages. Les tests et l'aperçu passent des doubles à `buildApp`. */
+/**
+ * Les vrais moteurs, d'après les réglages : rien n'est lancé ici (Ollama est interrogé à la demande, la CLI de Claude
+ * seulement en ligne). Les tests et l'aperçu passent des doubles à `buildApp`.
+ */
 export function createAi(config: AiConfig): AiDeps {
   return {
     ollama: config.ollamaUrl ? createOllamaClient({ baseUrl: config.ollamaUrl, timeoutMs: config.ollamaTimeoutMs, contextTokens: config.ollamaNumCtx }) : null,
     ollamaRefused: config.ollamaRefused,
-    claude: absentClaude(),
+    claude: createClaudeEngine({ command: config.claudeCli, timeoutMs: config.claudeTimeoutMs }),
     model: config.ollamaModel,
     maxChars: config.maxChars,
   }

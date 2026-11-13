@@ -22,6 +22,10 @@ export interface AiConfig {
   ollamaTimeoutMs: number
   /** Fenêtre de contexte demandée à Ollama (num_ctx). */
   ollamaNumCtx: number
+  /** Exécutable de Claude Code : un nom cherché sur la machine (« claude ») ou un chemin absolu ; un chemin relatif est refusé. */
+  claudeCli: string
+  /** Délai maximal d'une réponse de Claude. */
+  claudeTimeoutMs: number
   /** Taille maximale de ce qui part vers une IA en un appel (caractères). */
   maxChars: number
 }
@@ -114,6 +118,8 @@ export function loadConfig(env: Env = process.env): HubConfig {
       ollamaModel: env.OLLAMA_MODEL?.trim() || 'llama3.1:8b',
       ollamaTimeoutMs: int(env, 'OLLAMA_TIMEOUT_MS', 120_000, 1000, 3_600_000),
       ollamaNumCtx: int(env, 'OLLAMA_NUM_CTX', 8192, 1024, 262_144),
+      claudeCli: env.CLAUDE_CLI?.trim() || 'claude',
+      claudeTimeoutMs: int(env, 'CLAUDE_TIMEOUT_MS', 180_000, 1000, 3_600_000),
       maxChars: int(env, 'HUB_AI_MAX_CHARS', 12_000, 2000, 100_000),
     },
   }

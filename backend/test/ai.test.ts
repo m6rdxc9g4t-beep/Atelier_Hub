@@ -57,12 +57,12 @@ describe('réglages de l’IA', () => {
   const env = (more: Record<string, string>) => loadConfig({ HUB_STATIC_DIR: '', ...more }).ai
 
   it('Ollama par défaut, sur cette machine', () => {
-    assert.deepEqual(env({}), { ollamaUrl: 'http://127.0.0.1:11434', ollamaRefused: null, ollamaModel: 'llama3.1:8b', ollamaTimeoutMs: 120_000, ollamaNumCtx: 8192, maxChars: 12_000 })
+    assert.deepEqual(env({}), { ollamaUrl: 'http://127.0.0.1:11434', ollamaRefused: null, ollamaModel: 'llama3.1:8b', ollamaTimeoutMs: 120_000, ollamaNumCtx: 8192, claudeCli: 'claude', claudeTimeoutMs: 180_000, maxChars: 12_000 })
     assert.equal(env({ OLLAMA_URL: 'http://localhost:11500/' }).ollamaUrl, 'http://localhost:11500')
     assert.equal(env({ OLLAMA_BASE_URL: 'http://[::1]:11434' }).ollamaUrl, 'http://[::1]:11434')
     assert.equal(env({ OLLAMA_URL: 'http://127.0.0.1:1', OLLAMA_BASE_URL: 'http://127.0.0.1:2' }).ollamaUrl, 'http://127.0.0.1:1')
     assert.deepEqual(env({ OLLAMA_MODEL: 'llama3.2:1b', OLLAMA_TIMEOUT_MS: '600000', OLLAMA_NUM_CTX: '4096', HUB_AI_MAX_CHARS: '6000' }), {
-      ollamaUrl: 'http://127.0.0.1:11434', ollamaRefused: null, ollamaModel: 'llama3.2:1b', ollamaTimeoutMs: 600_000, ollamaNumCtx: 4096, maxChars: 6000,
+      ollamaUrl: 'http://127.0.0.1:11434', ollamaRefused: null, ollamaModel: 'llama3.2:1b', ollamaTimeoutMs: 600_000, ollamaNumCtx: 4096, claudeCli: 'claude', claudeTimeoutMs: 180_000, maxChars: 6000,
     })
     // Seule l'origine est gardée : ni identifiants ni chemin ne passent dans un message d'erreur.
     assert.equal(env({ OLLAMA_URL: 'http://moi:secret@127.0.0.1:11434/v1' }).ollamaUrl, 'http://127.0.0.1:11434')
@@ -79,8 +79,9 @@ describe('réglages de l’IA', () => {
   })
 
   it('le Hub démarre avec ses vrais moteurs quand Ollama est désactivé : état dit, rédaction refusée, aucun appel', async () => {
-    // Sans double : `buildApp` construit les moteurs d'après les réglages. Ollama désactivé et Claude absent ne parlent à personne.
-    const config = loadConfig({ HUB_STATIC_DIR: '', HUB_DATA_DIR: '/tmp/inutilise', OLLAMA_URL: 'http://192.168.1.20:11434' })
+    // Sans double : `buildApp` construit les moteurs d'après les réglages. Ollama désactivé ne parle à personne ; la CLI
+    // de Claude est donnée par un chemin absolu qui n'existe pas (jamais celle de la machine) : rien n'est lancé.
+    const config = loadConfig({ HUB_STATIC_DIR: '', HUB_DATA_DIR: '/tmp/inutilise', OLLAMA_URL: 'http://192.168.1.20:11434', CLAUDE_CLI: '/chemin/absent/claude' })
     const db = openDatabase(':memory:')
     const app = await buildApp({ config, db, fetch: async () => { throw new Error('aucune app ne doit être lue') } })
     try {
@@ -93,10 +94,13 @@ describe('réglages de l’IA', () => {
       const slide = listSlides(db, deck.id)[0]!
       const refused = await app.inject({ method: 'POST', url: `/api/presentations/${deck.id}/write`, headers, payload: { slide_ids: [slide.id] } })
       assert.deepEqual([refused.statusCode, refused.json<Failure>().code], [502, 'AI_UNAVAILABLE'])
-      // En ligne, Claude n'est pas encore branché : jamais disponible.
+      // En ligne, la CLI de Claude est introuvable : jamais disponible, et la raison est dite.
       setOnline(db, true)
       const claude = await app.inject({ method: 'POST', url: `/api/presentations/${deck.id}/write`, headers, payload: { slide_ids: [slide.id], engine: 'claude' } })
       assert.deepEqual([claude.statusCode, claude.json<Failure>().code], [502, 'CLAUDE_UNAVAILABLE'])
+      assert.match(claude.json<Failure>().detail, /^Claude CLI introuvable/)
+      const online = (await app.inject({ method: 'GET', url: '/api/ai/status', headers })).json<AiStatus>()
+      assert.deepEqual([online.online, online.auto, online.claude.available, online.claude.installed, online.claude.mode], [true, 'ollama', false, false, 'cli'])
     } finally {
       await app.close()
     }
@@ -556,7 +560,7 @@ describe('Claude : seulement en ligne', () => {
     assert.deepEqual([claude.calls.length, claude.state.statusCalls, ollama.calls.length], [0, 0, 2])
   })
 
-  it('en ligne, le moteur n’est pas encore là : 502 CLAUDE_UNAVAILABLE ; « Auto » retient Ollama', async () => {
+  it('en ligne, Claude absent de la machine : 502 CLAUDE_UNAVAILABLE ; « Auto » retient Ollama', async () => {
     const ollama = fakeOllama([answer([1, KPIS_TEXT])])
     const ctx = await setup(fakeAi({ ollama, claude: absentClaude() }))
     await ctx.call('PUT', '/api/settings/online-mode', { online: true })
