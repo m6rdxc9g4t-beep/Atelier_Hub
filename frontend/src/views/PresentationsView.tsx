@@ -9,6 +9,7 @@ import { useUi } from '../components/ui.tsx'
 import { presentationMeta } from '../lib/deck.ts'
 import { api } from '../lib/hub-api.ts'
 import { deckPath, href, navigate, onLinkClick, projectPath } from '../lib/router.ts'
+import { askWriteOnOpen } from '../lib/writing.ts'
 import type { HubProject, PresentationSummary } from '../lib/types.ts'
 
 /** Aperçu : ce qui écrit est désactivé, avec cette explication. */
@@ -154,8 +155,9 @@ export function PresentationsView({ project, today, onRead }: { project: HubProj
           project={project}
           today={today}
           onClose={() => setDialog(null)}
-          onCreated={(created) => {
+          onCreated={(created, write) => {
             setDialog(null)
+            if (write) askWriteOnOpen(created.id)
             navigate(deckPath(project.slug, created.id))
           }}
         />

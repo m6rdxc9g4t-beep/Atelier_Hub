@@ -49,6 +49,35 @@ const GARANCE_ITEMS = [
 ].map((item) => ({ ...item, projet: GARANCE }))
 const GARANCE_MILESTONES = [{ id: 21, nom: 'Clôture d’octobre', date: '2026-11-06', atteint: true }]
 
+// « Audit des stocks » : phases, epics, stories et tâches, du temps passé, mais pas encore de feature.
+const AUDIT_ITEMS = [
+  wi(501, 'TASK', 'Lister les entrepôts', 'CLOSED', 3, 4, '2026-11-02', '2026-11-06', 'Périmètre', 100),
+  wi(502, 'TASK', 'Extraire les stocks valorisés', 'OPEN', 0, 6, null, '2026-11-27', 'Extractions'),
+  wi(503, 'BUG', 'Doublons dans l’extraction de septembre', 'OPEN', 1.5, null, null, null, 'Extractions'),
+].map((item) => ({ ...item, projet: 'Audit des stocks' }))
+
+/**
+ * Arbre d'un projet comme `GET /api/atelier/projects/{id}/tree` d'Atelier Projets (forme réelle relevée le 13 novembre
+ * 2026 : `phases[].epics[].stories[]`, chaque nœud avec son `aggregate`, champs non lus ici omis).
+ */
+const tree = (id: number, name: string, phases: [string, [string, string[]][]][]) => ({
+  project: { id, name },
+  hours_per_day: 8,
+  range: null,
+  phases: phases.map(([title, epics], p) => ({
+    id: id * 100 + p,
+    title,
+    code: String(p + 1),
+    epics: epics.map(([epic, stories], e) => ({ id: id * 1000 + p * 10 + e, title: epic, stories: stories.map((story, k) => ({ id: id * 10000 + p * 100 + e * 10 + k, title: story })) })),
+  })),
+})
+const TREES: Record<number, ReturnType<typeof tree>> = {
+  4: tree(4, 'KPI CGO', [['Construction', [['Données', ['Alimentation']], ['Tableau de bord', ['Restitution', 'Collaboration']]]]]),
+  5: tree(5, 'Refonte du site', []),
+  6: tree(6, 'Audit des stocks', [['Cadrage', [['Inventaire', ['Périmètre', 'Extractions']]]], ['Analyse', []]]),
+  12: tree(12, GARANCE, [['Clôtures mensuelles', [['Octobre 2026', ['Clôture d’octobre']]]], ['Suivi', [['Budgets', ['Suivi des budgets']]]]]),
+}
+
 const MILESTONES = [
   { id: 9, nom: 'Cadrage validé', date: '2026-10-03', atteint: true },
   { id: 10, nom: 'Comité de pilotage', date: '2026-11-26', atteint: false },
@@ -172,6 +201,7 @@ export function fakeSuite(options: FakeSuiteOptions = {}): FakeSuite {
       json([
         { id: 4, name: 'KPI CGO', description: 'Indicateurs du contrôle de gestion', github: { owner: 'exemple', repo: 'kpi-cgo', url: 'https://github.com/exemple/kpi-cgo' }, local_repo_path: '~/Projets/kpi-cgo' },
         { id: 5, name: 'Refonte du site', description: null, github: null, local_repo_path: null },
+        { id: 6, name: 'Audit des stocks', description: 'Inventaire tournant et valorisation des stocks', github: null, local_repo_path: null },
         ...STORIES.filter((s) => loaded.projets.has(s.id)).map((s) => ({ id: s.projet.id, name: s.projet.nom, description: 'Exemple de la suite Atelier (données fictives).', github: null, local_repo_path: null })),
       ])],
     [/^http:\/\/projets\/api\/atelier\/projects\/12\/work-items$/, 'projets', () => json(table('work-items', GARANCE_ITEMS))],
@@ -180,7 +210,15 @@ export function fakeSuite(options: FakeSuiteOptions = {}): FakeSuite {
       json(STORIES.map((s) => ({ ...story(s), projet: s.projet.nom, elements: 5, jalons: 1, charge: loaded.projets.has(s.id), projectId: loaded.projets.has(s.id) ? s.projet.id : null })))],
     [/^http:\/\/projets\/api\/atelier\/projects\/4\/work-items$/, 'projets', () => json(table('work-items', WORK_ITEMS))],
     [/^http:\/\/projets\/api\/atelier\/projects\/4\/milestones$/, 'projets', () => json(table('milestones', MILESTONES))],
-    [/^http:\/\/projets\/api\/atelier\/projects\/\d+\/(work-items|milestones)$/, 'projets', () => json({ detail: 'Projet introuvable', code: 'NOT_FOUND' }, 404)],
+    // Un projet sans élément répond par des tables vides (pas par une erreur) ; un projet inconnu, par 404.
+    [/^http:\/\/projets\/api\/atelier\/projects\/5\/(work-items|milestones)$/, 'projets', (m) => json(table(m[1]!, []))],
+    [/^http:\/\/projets\/api\/atelier\/projects\/6\/work-items$/, 'projets', () => json(table('work-items', AUDIT_ITEMS))],
+    [/^http:\/\/projets\/api\/atelier\/projects\/6\/milestones$/, 'projets', () => json(table('milestones', []))],
+    [/^http:\/\/projets\/api\/atelier\/projects\/(\d+)\/tree$/, 'projets', (m) => {
+      const found = TREES[Number(m[1])]
+      return found ? json(found) : json({ detail: `Projet #${m[1]} introuvable`, code: 'NOT_FOUND' }, 404)
+    }],
+    [/^http:\/\/projets\/api\/atelier\/projects\/(\d+)\/(work-items|milestones)$/, 'projets', (m) => json({ detail: `Projet #${m[1]} introuvable`, code: 'NOT_FOUND' }, 404)],
     [/^http:\/\/wiki\/api\/atelier\/spaces$/, 'wiki', () =>
       json(table('spaces', [{ id: '1', nom: 'Général', pages: 14 }, { id: '7', nom: 'KPI CGO', pages: 5 }, { id: '9', nom: 'Studio Garance', pages: 6 }]))],
     [/^http:\/\/wiki\/api\/exemples-suite$/, 'wiki', () =>

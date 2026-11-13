@@ -8,6 +8,8 @@ import { loadConfig, type HubConfig } from '../../src/config.js'
 import type { Fetcher } from '../../src/connectors/http.js'
 import { openDatabase } from '../../src/db/database.js'
 import type { HubProject } from '../../src/domain/types.js'
+import type { AiDeps } from '../../src/services/ai.js'
+import { fakeAi } from './ai.js'
 import { fakeAppsConfig, fakeSuite } from './suite.js'
 
 type DownApp = 'projets' | 'wiki' | 'viz' | 'convert' | 'nexus'
@@ -23,7 +25,8 @@ after(async () => {
   for (const app of apps) await app.close()
 })
 
-export async function startHub() {
+/** `ai` : les moteurs du test (doubles de `fixtures/ai.ts`) ; sans eux, des doubles qui ne prévoient aucun appel. */
+export async function startHub(options: { ai?: AiDeps } = {}) {
   /** Apps qui ne répondent pas : modifiable en cours de test. */
   const down = new Set<DownApp>()
   /** Réponses remplacées (adresse sans paramètres → corps JSON) : ce qu'une app répondrait après un changement. */
@@ -39,13 +42,13 @@ export async function startHub() {
   const base = loadConfig({ HUB_STATIC_DIR: '', HUB_DATA_DIR: '/tmp/inutilise' })
   const config: HubConfig = { ...base, apps: fakeAppsConfig(suite.tabDir) }
   const db = openDatabase(':memory:')
-  const app = await buildApp({ config, db, fetch: fetchImpl, today: () => '2026-11-10' })
+  const app = await buildApp({ config, db, fetch: fetchImpl, today: () => '2026-11-10', ai: options.ai ?? fakeAi() })
   apps.push(app)
   const call = async <T>(method: Method, url: string, payload?: unknown, headers: Record<string, string> = {}) => {
     const response = await app.inject({ method, url, payload: payload as object, headers: { host: '127.0.0.1:3700', ...headers } })
     return { status: response.statusCode, body: (response.body ? JSON.parse(response.body) : null) as T }
   }
-  return { db, call, suite, down, replaced }
+  return { app, db, call, suite, down, replaced }
 }
 
 export type Hub = Awaited<ReturnType<typeof startHub>>

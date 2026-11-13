@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 
+import { RAIL_QUERY } from './shell.ts'
+
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
 const withoutComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')
 
@@ -104,3 +106,68 @@ describe('charte de la suite', () => {
     assert.equal(body(read('./types.ts')), body(read('../../../backend/src/domain/types.ts')))
   })
 })
+
+/** Corps de la règle CSS dont le sélecteur est exactement `selector`. */
+function rule(css: string, selector: string): string {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const found = new RegExp(`(?:^|})\\s*${escaped}\\s*{([^}]*)}`).exec(css)
+  assert.ok(found, `${selector} est déclaré`)
+  return found[1]!
+}
+
+describe('barre latérale à la forme de Viz et de Tab', () => {
+  const css = withoutComments(read('../styles/hub.css'))
+  const shell = read('../components/Shell.tsx')
+  const sidebar = shell.slice(shell.indexOf('export function Sidebar('), shell.indexOf('export function Topbar('))
+  const topbar = shell.slice(shell.indexOf('export function Topbar('))
+
+  it('a les mesures communes : 232 px, en-tête de 44 px, lignes de 30 px, tuile de marque de 20 px, icônes de 16 px', () => {
+    assert.match(css, /--side-w: 232px;/)
+    assert.match(css, /--top-h: 44px;/)
+    assert.match(rule(css, '.side-head'), /height: var\(--top-h\);/)
+    assert.match(rule(css, '.nav-link'), /height: 30px;/)
+    assert.match(rule(css, '.nav-link svg'), /width: 16px;\s*height: 16px;/)
+    assert.match(rule(css, '.nav-link__mark'), /width: 16px;\s*height: 16px;/)
+    assert.match(shell, /className="atelier-brand__tile atelier-brand__tile--sm"/)
+  })
+
+  it('marque l’entrée courante par le fond neutre de la marque commune, jamais par une barre de couleur', () => {
+    assert.match(sidebar, /atelier-nav-active/)
+    assert.doesNotMatch(css, /border-left:[^;]*var\(--accent/)
+    assert.doesNotMatch(rule(css, '.nav-link.atelier-nav-active,\n.nav-link.atelier-nav-active:hover'), /accent/)
+  })
+
+  it('garde l’ordre : marque, zone qui défile (fiches), puis le pied (« Exemples de la suite », thème)', () => {
+    const order = ['className="side-head"', '<Brand />', 'className="sidebar__scroll"', 'className="side-section"', 'projects.map', 'className="side-extra"', 'title="Exemples de la suite"', 'className="sidebar__foot"', '<ThemeSwitch />']
+    const at = order.map((mark) => sidebar.indexOf(mark))
+    assert.ok(at.every((i) => i > 0), `repères absents : ${order.filter((_m, i) => at[i]! < 0).join(', ')}`)
+    assert.deepEqual([...at].sort((a, b) => a - b), at)
+    // Seule la zone du milieu défile, et jamais en largeur.
+    for (const fixed of ['.side-head', '.side-extra', '.sidebar__foot']) assert.match(rule(css, fixed), /flex: none;/, fixed)
+    assert.match(rule(css, '.sidebar__scroll'), /overflow-x: hidden;\s*overflow-y: auto;/)
+  })
+
+  it('place le sélecteur de la suite au début de la barre haute, avant le titre (comme Viz)', () => {
+    assert.ok(topbar.indexOf('<SuiteSwitcher />') > 0 && topbar.indexOf('<SuiteSwitcher />') < topbar.indexOf('topbar__title'))
+    assert.doesNotMatch(sidebar, /SuiteSwitcher/)
+  })
+
+  it('devient un rail d’icônes sous 1024 px (comme Viz), le panneau des fiches s’ouvrant par-dessus (comme Tab)', () => {
+    assert.ok(css.includes(`@media ${RAIL_QUERY} {`), 'hub.css et lib/shell.ts doivent partager la même requête')
+    assert.match(css, /--rail-w: 48px;/)
+    assert.match(css, /\.shell\[data-nav="open"\] \.sidebar \{[^}]*position: fixed;[^}]*width: min\(300px, 85vw\);/)
+    assert.match(sidebar, /data-panel-open/)
+    assert.match(sidebar, /data-panel-close/)
+    // Le bouton du rail reçoit le focus quand le déclencheur d'une fenêtre n'est plus à l'écran.
+    assert.match(sidebar, /data-panel-open\s+data-focus-fallback/)
+    // Dans le rail, un libellé masqué reste le nom lu : il n'est jamais retiré par `display: none`.
+    assert.match(css, /\.shell\[data-nav="closed"\] \.nav-link \{[^}]*font-size: 0;/)
+  })
+
+  it('donne 40 px à toute cible de la barre au doigt', () => {
+    const coarse = css.slice(css.indexOf('@media (pointer: coarse)'))
+    assert.match(coarse, /\.nav-link \{\s*height: 40px;/)
+    assert.match(coarse, /\.side-close,\s*\.suite-trigger,\s*\.side-section \.btn \{\s*width: 40px;\s*height: 40px;/)
+  })
+})
+

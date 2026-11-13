@@ -5,6 +5,7 @@ import { buildApp } from '../src/app.js'
 import { loadConfig, type HubConfig } from '../src/config.js'
 import { openDatabase } from '../src/db/database.js'
 import type { Catalog, ExampleCatalog, HubLink, HubProject, Overview } from '../src/domain/types.js'
+import { fakeAi } from './fixtures/ai.js'
 import { fakeAppsConfig, fakeSuite, type FakeSuiteOptions } from './fixtures/suite.js'
 
 const apps: Awaited<ReturnType<typeof buildApp>>[] = []
@@ -17,7 +18,7 @@ async function setup(options: FakeSuiteOptions = {}) {
   const base = loadConfig({ HUB_STATIC_DIR: '', HUB_DATA_DIR: '/tmp/inutilise' })
   const config: HubConfig = { ...base, apps: fakeAppsConfig(suite.tabDir) }
   const db = openDatabase(':memory:')
-  const app = await buildApp({ config, db, fetch: suite.fetch, today: () => '2026-11-10' })
+  const app = await buildApp({ config, db, fetch: suite.fetch, today: () => '2026-11-10', ai: fakeAi() })
   apps.push(app)
   const call = async <T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', url: string, payload?: unknown, headers: Record<string, string> = {}) => {
     const response = await app.inject({ method, url, payload: payload as object, headers: { host: '127.0.0.1:3700', ...headers } })
@@ -139,6 +140,33 @@ describe('vue d’ensemble', () => {
     assert.deepEqual(names.slice(1, 3), ['data_analyst', 'orchestrateur'])
     assert.ok(!names.includes('finance'))
     assert.deepEqual(body.nexus.items.find((a) => a.name === 'developpeur')?.reasons, ['Projets', 'GitHub'])
+    // Contenu du projet, lu dans son arbre (sert quand il n'y a pas de feature)
+    assert.deepEqual(body.projets.contents, { phases: 1, epics: 2, stories: 3, features: 6, tasks: 4, bugs: 1, hours_spent: 66.5 })
+  })
+
+  it('dit ce que contient un projet rattaché qui n’a pas encore de feature', async () => {
+    const { call } = await setup()
+    const read = async (projetsId: string) => {
+      const created = await call<HubProject>('POST', '/api/projects', { name: `Fiche ${projetsId}` })
+      await call('PATCH', `/api/projects/${created.body.id}`, { projets_id: projetsId, projets_name: `Projet ${projetsId}` })
+      return (await call<Overview>('GET', `/api/projects/${created.body.id}/overview`)).body
+    }
+    // Phases, epics, stories et tâches, du temps passé, aucune feature
+    const audit = await read('6')
+    assert.equal(audit.projets.state, 'ok')
+    assert.equal(audit.projets.features.length, 0)
+    assert.deepEqual(audit.projets.contents, { phases: 2, epics: 1, stories: 2, features: 0, tasks: 2, bugs: 1, hours_spent: 4.5 })
+    assert.equal(audit.kpis?.features_total, 0)
+    // Projet vide : des tables vides, pas une erreur
+    const empty = await read('5')
+    assert.equal(empty.projets.state, 'ok')
+    assert.equal(empty.projets.items_total, 0)
+    assert.deepEqual(empty.projets.contents, { phases: 0, epics: 0, stories: 0, features: 0, tasks: 0, bugs: 0, hours_spent: 0 })
+    // Projet supprimé dans Projets : le panneau le dit
+    const gone = await read('99')
+    assert.equal(gone.projets.state, 'down')
+    assert.match(gone.projets.message ?? '', /Projet #99 introuvable/)
+    assert.equal(gone.projets.contents, null)
   })
 
   it('reste lisible quand des apps sont arrêtées', async () => {
@@ -172,12 +200,32 @@ describe('catalogue « Lier »', () => {
   it('propose les rattachements et les éléments de chaque app', async () => {
     const { call } = await setup()
     const projets = await call<Catalog>('GET', '/api/catalog/projets')
-    assert.deepEqual(projets.body.candidates.map((c) => [c.kind, c.label, c.bind]), [['project', 'KPI CGO', true], ['project', 'Refonte du site', true], ['project', 'Gestion 2026 — Studio Garance', true]])
+    // Tous les projets, sans rien taper
+    assert.deepEqual(projets.body.candidates.map((c) => [c.kind, c.ref, c.label, c.bind]), [
+      ['project', '4', 'KPI CGO', true],
+      ['project', '5', 'Refonte du site', true],
+      ['project', '6', 'Audit des stocks', true],
+      ['project', '12', 'Gestion 2026 — Studio Garance', true],
+    ])
+    // Recherche sans casse ni accents, sur le nom (et la description)
+    const labels = async (url: string) => (await call<Catalog>('GET', url)).body.candidates.map((c) => c.label)
+    assert.deepEqual(await labels('/api/catalog/projets?q=kpi%20cgo'), ['KPI CGO'])
+    assert.deepEqual(await labels('/api/catalog/projets?q=AUDIT'), ['Audit des stocks'])
+    assert.deepEqual(await labels('/api/catalog/tab?q=realise'), ['Réalisé mensuel'])
+    assert.deepEqual(await labels('/api/catalog/viz?q=ECARTS'), ['KPI CGO — Écarts budgétaires'])
     const tab = await call<Catalog>('GET', '/api/catalog/tab?q=kpi')
     assert.deepEqual(tab.body.candidates.map((c) => c.kind), ['project', 'table', 'table', 'table'])
     const wiki = await call<Catalog>('GET', '/api/catalog/wiki?q=marge')
     assert.deepEqual(wiki.body.candidates.map((c) => [c.kind, c.label]), [['page', 'Règles de calcul de la marge']])
     assert.equal((await call('GET', '/api/catalog/inconnue')).status, 422)
+  })
+
+  it('dit quand Tab n’a rien à lire, au lieu de « rien ne correspond »', async () => {
+    const { call } = await setup({ noTab: true })
+    const res = await call<Catalog>('GET', '/api/catalog/tab?q=kpi%20cgo')
+    assert.equal(res.body.state, 'off')
+    assert.match(res.body.message ?? '', /aucune table d’Atelier Tab/)
+    assert.deepEqual(res.body.candidates, [])
   })
 
   it('signale une app arrêtée', async () => {

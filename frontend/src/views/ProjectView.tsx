@@ -3,6 +3,7 @@
 
 import {
   ArrowRight,
+  ArrowUpRight,
   Bot,
   Copy,
   Database,
@@ -28,6 +29,7 @@ import { useUi } from '../components/ui.tsx'
 import { count, dueIn, hours, plural, relativeDay, shortDate, STATUS_LABELS, STATUS_VARS, TYPE_LABELS } from '../lib/format.ts'
 import { clockTime } from '../lib/freshness.ts'
 import { href, onLinkClick, presentationsPath } from '../lib/router.ts'
+import { contentsLine, isEmptyProject, isServerHost, nextStep, TAB_SERVER_NOTE } from '../lib/linking.ts'
 import { buildTimeline } from '../lib/timeline.ts'
 import type { AppId, HubLink, LinkApp, Overview, SourceItem, SourceKind, WorkItem } from '../lib/types.ts'
 
@@ -71,6 +73,10 @@ function Bindings({ overview, actions }: { overview: Overview; actions: ProjectA
 function Kpis({ overview, today }: { overview: Overview; today: string }) {
   const k = overview.kpis
   if (!k) return null
+  const contents = overview.projets.contents
+  // Projet vide : pas de rangée de zéros, le panneau Projets dit quoi créer.
+  if (contents && isEmptyProject(contents)) return null
+  const noFeature = k.features_total === 0 && contents !== null
   const ratio = k.hours_estimated > 0 ? Math.round((k.hours_spent / k.hours_estimated) * 100) : null
   return (
     <div className="kpis" role="list" aria-label="Chiffres clés">
@@ -79,14 +85,23 @@ function Kpis({ overview, today }: { overview: Overview; today: string }) {
         <span className="atelier-kpi__value">{hours(k.hours_spent)}</span>
         <span className="atelier-kpi__note">{k.hours_estimated > 0 ? `sur ${hours(k.hours_estimated)} estimées${ratio !== null ? ` · ${ratio} %` : ''}` : 'aucune estimation'}</span>
       </div>
-      <div className="atelier-kpi" role="listitem">
-        <span className="atelier-kpi__label">Features</span>
-        <span className="atelier-kpi__value">
-          {count(k.features_done)}
-          <span className="kpi-of"> / {count(k.features_total)}</span>
-        </span>
-        <span className="atelier-kpi__note">terminées</span>
-      </div>
+      {noFeature ? (
+        // Sans feature, « 0 / 0 terminées » ne dit rien : on compte ce que le projet contient.
+        <div className="atelier-kpi" role="listitem">
+          <span className="atelier-kpi__label">Éléments</span>
+          <span className="atelier-kpi__value">{count(contents.tasks + contents.bugs)}</span>
+          <span className="atelier-kpi__note">{[contents.tasks ? plural(contents.tasks, 'tâche', 'tâches') : null, contents.bugs ? plural(contents.bugs, 'bug', 'bugs') : null, 'aucune feature'].filter(Boolean).join(' · ')}</span>
+        </div>
+      ) : (
+        <div className="atelier-kpi" role="listitem">
+          <span className="atelier-kpi__label">Features</span>
+          <span className="atelier-kpi__value">
+            {count(k.features_done)}
+            <span className="kpi-of"> / {count(k.features_total)}</span>
+          </span>
+          <span className="atelier-kpi__note">terminées</span>
+        </div>
+      )}
       <div className="atelier-kpi" role="listitem">
         <span className="atelier-kpi__label">En cours</span>
         <span className="atelier-kpi__value">{count(k.active)}</span>
@@ -216,6 +231,26 @@ function ActiveList({ items, today }: { items: WorkItem[]; today: string }) {
   )
 }
 
+/** Projet rattaché sans feature : ce qu'il contient, ce qu'il faut créer dans Projets, et le lien pour le faire. */
+function ProjetsContentsNote({ panel }: { panel: Overview['projets'] }) {
+  const contents = panel.contents
+  const line = contents ? contentsLine(contents) : ''
+  const empty = contents ? isEmptyProject(contents) : panel.items_total === 0
+  return (
+    <div className="projets-contents">
+      <p className="projets-contents__lead">
+        {empty ? `Le projet « ${panel.project_name ?? ''} » est vide dans Atelier Projets.` : 'Ce projet n’a pas encore de feature.'}
+      </p>
+      {line && !empty && <p className="projets-contents__line">Il contient {line}.</p>}
+      <p className="projets-contents__next">{contents ? nextStep(contents) : 'Ajoute des features dans Atelier Projets : leur frise s’affichera ici.'}</p>
+      <ExtLink href={panel.url} className="btn btn--sm projets-contents__open" label="Atelier Projets">
+        Ouvrir le projet dans Atelier Projets
+        <ArrowUpRight aria-hidden />
+      </ExtLink>
+    </div>
+  )
+}
+
 type ProjetsTab = 'features' | 'active' | 'milestones'
 
 function ProjetsPanel({ overview, today, actions }: { overview: Overview; today: string; actions: ProjectActions }) {
@@ -253,7 +288,7 @@ function ProjetsPanel({ overview, today, actions }: { overview: Overview; today:
       {panel.state === 'off' && (
         <PanelEmpty text="Rattache le projet d’Atelier Projets : ses features, ce qui est en cours et le temps passé s’afficheront ici." action={{ label: 'Rattacher un projet', run: () => actions.link('projets') }} />
       )}
-      {panel.state === 'ok' && tab === 'features' && (panel.features.length > 0 ? <Frise features={panel.features} today={today} /> : <PanelEmpty text="Aucune feature dans ce projet." />)}
+      {panel.state === 'ok' && tab === 'features' && (panel.features.length > 0 ? <Frise features={panel.features} today={today} /> : <ProjetsContentsNote panel={panel} />)}
       {panel.state === 'ok' && tab === 'active' && <ActiveList items={panel.active} today={today} />}
       {panel.state === 'ok' && tab === 'milestones' && (
         <RowList
@@ -444,7 +479,10 @@ function TabPanel({ overview, today, actions }: { overview: Overview; today: str
     <Panel id="tab" app="tab" title="Tab" count={panel.items.length} state={panel.state} message={panel.message} url={panel.url} onLink={() => actions.link('tab')} linkLabel="Lier un projet ou une table de Tab">
       <p className="panel__sub">{overview.project.tab_project ? `Tables du projet « ${overview.project.tab_project} »` : 'Tables associées'}</p>
       {panel.state === 'off' && panel.items.length === 0 ? (
-        <PanelEmpty text={panel.message ?? 'Rien de lié.'} />
+        <>
+          <PanelEmpty text={panel.message ?? 'Rien de lié.'} />
+          {isServerHost(window.location.hostname) && <p className="panel__note">{TAB_SERVER_NOTE}</p>}
+        </>
       ) : (
         <RowList
           items={panel.items}

@@ -2,9 +2,10 @@
 // (ce qui est enregistré + la partie vivante, relue dans les apps à chaque lecture). Rien de vivant n'est écrit.
 
 import type { Db } from '../db/database.js'
+import { generalFacts, staleNumbers } from '../domain/facts.js'
 import { buildPlan, defaultTitle, TITLE_ONLY } from '../domain/plan.js'
 import { resolveDeck } from '../domain/slides.js'
-import type { Deck, PresentationSummary } from '../domain/types.js'
+import type { Deck, Overview, PresentationSummary } from '../domain/types.js'
 import { buildOverview, type SuiteContext } from './overview.js'
 import { createPresentation, getPresentation, LIMITS, listSlides, presentationTitle } from './presentations.js'
 import { getProject } from './projects.js'
@@ -31,5 +32,14 @@ export async function createDeck(db: Db, suite: SuiteContext, projectId: number,
 export async function readDeck(db: Db, suite: SuiteContext, presentationId: number): Promise<Deck> {
   const overview = await buildOverview(db, suite, getPresentation(db, presentationId).project_id)
   // Relue après la suite : la présentation a pu changer (ou disparaître) pendant la lecture des apps.
-  return resolveDeck(getPresentation(db, presentationId), listSlides(db, presentationId), overview, suite.today())
+  return withStale(resolveDeck(getPresentation(db, presentationId), listSlides(db, presentationId), overview, suite.today()), overview)
+}
+
+/**
+ * « À relire » : chaque texte rédigé par une IA est recomparé aux chiffres du jour, avec la comparaison qui a servi
+ * à sa rédaction. Les nombres qui n'y figurent plus reviennent dans `stale`. C'est une aide, pas une garantie.
+ */
+export function withStale(deck: Deck, overview: Overview): Deck {
+  const general = generalFacts(overview)
+  return { ...deck, slides: deck.slides.map((slide) => ({ ...slide, stale: staleNumbers(slide, general) })) }
 }

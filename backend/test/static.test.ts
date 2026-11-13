@@ -7,6 +7,7 @@ import { after, describe, it } from 'node:test'
 import { buildApp } from '../src/app.js'
 import { loadConfig } from '../src/config.js'
 import { openDatabase } from '../src/db/database.js'
+import { fakeAi } from './fixtures/ai.js'
 
 const dir = mkdtempSync(join(tmpdir(), 'hub-ui-'))
 mkdirSync(join(dir, 'assets'))
@@ -14,7 +15,7 @@ writeFileSync(join(dir, 'index.html'), '<!doctype html><title>Atelier Hub</title
 writeFileSync(join(dir, 'atelier-theme.js'), '/* thème */')
 writeFileSync(join(dir, 'assets', 'index-abc123.js'), 'console.log(1)')
 
-const app = await buildApp({ config: loadConfig({ HUB_STATIC_DIR: dir, HUB_DATA_DIR: '/tmp/inutilise' }), db: openDatabase(':memory:') })
+const app = await buildApp({ config: loadConfig({ HUB_STATIC_DIR: dir, HUB_DATA_DIR: '/tmp/inutilise' }), db: openDatabase(':memory:'), ai: fakeAi() })
 after(() => app.close())
 
 const get = (url: string, method: 'GET' | 'HEAD' = 'GET') => app.inject({ method, url, headers: { host: '127.0.0.1:3700' } })

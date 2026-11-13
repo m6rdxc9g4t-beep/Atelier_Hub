@@ -2,10 +2,10 @@
 // texte rédigés dans le Hub (sinon ceux que le Hub calcule), et la partie vivante (`live`) telle que le backend vient
 // de la relire dans les apps — cartes de chiffres, lignes, lien, état. La couleur d'une app ne sort pas de son icône.
 
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { isLongTitle, longDay, moreText, shownText, shownTitle } from '../lib/deck.ts'
+import { isLongTitle, longDay, moreText, provenance, shownText, shownTitle, staleNotice } from '../lib/deck.ts'
 import { shortDate, STATUS_LABELS, STATUS_VARS } from '../lib/format.ts'
 import { parseSlideText } from '../lib/slide-text.ts'
 import { appName } from '../lib/suite.ts'
@@ -67,6 +67,9 @@ export function Slide({
   const app = live.app ? appName(live.app) : null
   const withStatus = live.rows.some((row) => row.status !== null)
   const more = moreText(live.more)
+  const stale = staleNotice(slide.stale)
+  // Un texte rédigé par une IA le dit, avec son modèle et sa date ; ta phrase et la phrase automatique ne disent rien.
+  const byAi = slide.body !== null && (slide.text_source === 'ollama' || slide.text_source === 'claude')
 
   const rowLabel = (row: SlideRow): ReactNode =>
     row.url ? (
@@ -96,6 +99,19 @@ export function Slide({
 
         <div className="slide__body">
           <SlideText text={shownText(slide)} />
+          {/* Notes d'un texte d'IA, sous lui : d'où il vient, et s'il est à relire (un de ses nombres n'est plus dans
+              les chiffres du jour). En lecture et en édition, jamais en plein écran ni dans le PDF (slides.css). */}
+          {byAi && (
+            <div className="slide__notes">
+              <p className="slide__source">{provenance(slide, today)}</p>
+              {stale && (
+                <p className="slide__stale">
+                  <TriangleAlert aria-hidden />
+                  <span>{stale}</span>
+                </p>
+              )}
+            </div>
+          )}
 
           {live.figures.length > 0 && (
             <div className="slide-kpis" role="list" aria-label="Chiffres">

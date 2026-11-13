@@ -26,6 +26,13 @@ export interface SlidePatch {
   body?: string | null
 }
 
+/** Texte rédigé par une IA pour une diapositive : déjà contrôlé (forme, nombres) par l'appelant. */
+export interface SlideText {
+  body: string
+  source: 'ollama' | 'claude'
+  model: string
+}
+
 const now = () => new Date().toISOString()
 
 function clean(value: string | null | undefined, max: number, field: string): string | null {
@@ -194,5 +201,40 @@ export function reorderSlides(db: Db, presentationId: number, ids: readonly numb
     if (!exact) throw invalid('L’ordre doit contenir chaque diapositive une seule fois')
     settle(db, presentationId, ids, now())
     return listSlides(db, presentationId)
+  })()
+}
+
+/**
+ * Textes rédigés par une IA, enregistrés en une transaction : provenance (moteur, modèle) et date. Un appel d'IA
+ * dure longtemps : chaque diapositive est relue ici, dans la transaction. Supprimée entre-temps → sautée ; écrite
+ * à la main (avant ou pendant l'appel) → sautée, sauf `overwriteManual`. Un texte d'IA ne remplace donc jamais un
+ * texte écrit à la main sans que l'utilisateur l'ait demandé.
+ */
+export function writeSlideTexts(
+  db: Db,
+  presentationId: number,
+  texts: ReadonlyMap<number, SlideText>,
+  overwriteManual: boolean,
+): { written: SlideRecord[]; skipped: { slide_id: number; reason: string }[] } {
+  const cleaned = [...texts].map(([slideId, text]) => ({ slideId, text, body: clean(text.body, LIMITS.body, 'Texte') }))
+  return db.transaction(() => {
+    getPresentation(db, presentationId)
+    const stamp = now()
+    const select = db.prepare(`${SLIDE} WHERE id = ? AND presentation_id = ?`)
+    const update = db.prepare('UPDATE slides SET body = ?, text_source = ?, text_model = ?, text_at = ?, updated_at = ? WHERE id = ?')
+    const written: number[] = []
+    const skipped: { slide_id: number; reason: string }[] = []
+    for (const { slideId, text, body } of cleaned) {
+      const current = select.get(slideId, presentationId) as SlideRecord | undefined
+      if (!current) skipped.push({ slide_id: slideId, reason: 'la diapositive a été supprimée entre-temps' })
+      else if (current.text_source === 'manual' && !overwriteManual) skipped.push({ slide_id: slideId, reason: 'ton texte est gardé' })
+      else if (!body) skipped.push({ slide_id: slideId, reason: 'aucun texte proposé' })
+      else {
+        update.run(body, text.source, text.model.trim().slice(0, 100) || null, stamp, stamp, slideId)
+        written.push(slideId)
+      }
+    }
+    if (written.length > 0) db.prepare('UPDATE presentations SET updated_at = ? WHERE id = ?').run(stamp, presentationId)
+    return { written: written.map((slideId) => getSlide(db, presentationId, slideId)), skipped }
   })()
 }

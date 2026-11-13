@@ -48,6 +48,10 @@ export const demoApi: HubApi = {
   updateSlide: readOnly,
   removeSlide: readOnly,
   reorderSlides: readOnly,
+  // L'IA est désactivée en aperçu : son état n'y est jamais demandé (voir `OnlineSwitch`, « Rédiger avec l'IA »).
+  aiStatus: readOnly,
+  setOnline: readOnly,
+  write: readOnly,
   openExampleProject: readOnly,
   createProject: readOnly,
   updateProject: readOnly,

@@ -1,11 +1,15 @@
-// Coquille (charte v2 « Linear ») : marque « Atelier Hub » et « À propos », sélecteur de la suite, liste des fiches,
-// « Exemples de la suite » et choix du thème (préférence commune à la suite) au pied, barre haute.
+// Coquille (charte v2 « Linear »), à la forme de celles d'Atelier Viz et d'Atelier Tab : barre latérale de 232 px —
+// marque « Atelier Hub » en tête (44 px), zone qui défile (« Fiches projet » : compteur, +, liste), puis au pied
+// « Exemples de la suite » et le thème (préférence commune à la suite) — et barre haute qui commence par le
+// sélecteur « Suite Atelier » (comme Viz). Sous 1024 px, la barre devient un rail d'icônes (comme Viz) : le bouton
+// « Fiches » ouvre le panneau complet par-dessus la page (le tiroir de Tab). L'en-tête et le pied ne défilent pas.
 
-import { BookOpen, Check, LayoutGrid, Menu, Monitor, Moon, Plus, Sun } from 'lucide-react'
+import { BookOpen, Check, LayoutGrid, LayoutList, Monitor, Moon, PanelLeftClose, Plus, Sun } from 'lucide-react'
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 
 import { href, onLinkClick, projectPath } from '../lib/router.ts'
 import { checkHealth, CURRENT_APP, PORTAL_URL, SUITE_APPS, type SuiteAppId } from '../lib/suite.ts'
+import { nextTheme } from '../lib/shell.ts'
 import { useTheme, type ThemePreference } from '../lib/theme.ts'
 import type { HubProject } from '../lib/types.ts'
 import { AppGlyph } from './AppGlyph.tsx'
@@ -13,16 +17,16 @@ import { useDismiss } from './ui.tsx'
 
 const ABOUT_ID = 'atelier-about'
 
-export function Brand({ compact = false }: { compact?: boolean }) {
+export function Brand() {
   return (
     <button
       type="button"
-      className={`atelier-brand side-brand${compact ? ' side-brand--compact' : ''}`}
+      className="atelier-brand side-brand"
       aria-haspopup="dialog"
       title="À propos d’Atelier Hub"
       onClick={() => document.querySelector<HTMLDialogElement>(`#${ABOUT_ID}`)?.showModal()}
     >
-      <span className={`atelier-brand__tile${compact ? ' atelier-brand__tile--sm' : ''}`} aria-hidden="true">
+      <span className="atelier-brand__tile atelier-brand__tile--sm" aria-hidden="true">
         <AppGlyph id="hub" />
       </span>
       <span className="atelier-brand__name">
@@ -113,7 +117,7 @@ export function SuiteSwitcher() {
       <button
         ref={trigger}
         type="button"
-        className="btn btn--ghost btn--icon"
+        className="btn btn--ghost btn--icon suite-trigger"
         aria-label="Suite Atelier : changer d’application"
         title="Suite Atelier"
         aria-haspopup="menu"
@@ -189,7 +193,7 @@ const THEMES: { value: ThemePreference; label: string; icon: ReactNode }[] = [
 export function ThemeSwitch() {
   const [preference, setPreference] = useTheme()
   return (
-    <div className="segmented segmented--icons" role="group" aria-label="Thème">
+    <div className="segmented segmented--icons theme-switch" role="group" aria-label="Thème">
       {THEMES.map((t) => (
         <button key={t.value} type="button" aria-pressed={t.value === preference} aria-label={`Thème : ${t.label}`} title={t.label} onClick={() => setPreference(t.value)}>
           {t.icon}
@@ -199,10 +203,26 @@ export function ThemeSwitch() {
   )
 }
 
+/** Rail d'icônes : le thème en un seul bouton, qui passe à la préférence suivante (Système → Clair → Sombre). */
+function ThemeCycle() {
+  const [preference, setPreference] = useTheme()
+  const current = THEMES.find((t) => t.value === preference) ?? THEMES[0]!
+  const next = THEMES.find((t) => t.value === nextTheme(preference))!
+  return (
+    <button type="button" className="nav-link theme-cycle" title={`Thème : ${current.label} (passer à ${next.label})`} onClick={() => setPreference(next.value)}>
+      {current.icon}
+      Thème : {current.label}
+    </button>
+  )
+}
+
 export function Sidebar({
   projects,
   currentSlug,
   loading,
+  panelOpen,
+  onOpenPanel,
+  onClosePanel,
   onNewProject,
   onExamples,
   onNavigate,
@@ -210,83 +230,105 @@ export function Sidebar({
   projects: HubProject[]
   currentSlug: string | null
   loading: boolean
+  /** Le panneau complet est ouvert par-dessus la page (rail d'icônes, sous 1024 px). */
+  panelOpen: boolean
+  onOpenPanel: () => void
+  onClosePanel: () => void
   onNewProject: () => void
   /** Ouvre « Exemples de la suite » (histoires fictives à suivre d'une app à l'autre). */
   onExamples: () => void
   onNavigate: () => void
 }) {
+  const current = projects.find((p) => p.slug === currentSlug)
   return (
-    <aside className="sidebar" aria-label="Fiches projet">
+    <>
       <div className="side-head">
         <Brand />
-        <div className="topbar__spacer" />
-        <SuiteSwitcher />
-      </div>
-      <div className="side-section">
-        <span className="side-section__title">Fiches projet</span>
-        <span className="side-section__count">{projects.length > 0 ? projects.length : ''}</span>
-        <button type="button" className="btn btn--ghost btn--icon btn--sm" aria-label="Nouvelle fiche projet" title="Nouvelle fiche projet" onClick={onNewProject}>
-          <Plus />
+        <button type="button" className="btn btn--ghost btn--icon side-close" data-panel-close aria-label="Replier le panneau" title="Replier le panneau" onClick={onClosePanel}>
+          <PanelLeftClose />
         </button>
       </div>
-      <nav className="sidebar__scroll side-nav" aria-label="Fiches">
-        {loading && projects.length === 0 && (
-          <>
-            <div className="skeleton" />
-            <div className="skeleton skeleton--short" />
-          </>
-        )}
-        {projects.map((p) => {
-          const to = projectPath(p.slug)
-          return (
-            <a
-              key={p.id}
-              className="nav-link"
-              href={href(to)}
-              aria-current={p.slug === currentSlug ? 'page' : undefined}
-              onClick={(e) => {
-                onLinkClick(e, to)
-                onNavigate()
-              }}
-            >
-              <span className="nav-link__mark" aria-hidden="true">
-                {p.name.slice(0, 1)}
-              </span>
-              <span className="nav-link__text">{p.name}</span>
-            </a>
-          )
-        })}
-        {!loading && projects.length === 0 && <p className="side-note">Aucune fiche pour l’instant.</p>}
-      </nav>
-      <div className="sidebar__tools">
-        <button type="button" className="nav-link nav-link--quiet" aria-haspopup="dialog" onClick={onExamples}>
+      <div className="sidebar__scroll">
+        {/* Rail d'icônes seulement : la liste des fiches n'y tient pas, ce bouton ouvre le panneau complet. */}
+        <nav className="side-nav side-rail-nav" aria-label="Navigation">
+          <button
+            type="button"
+            className={`nav-link side-rail-only${current ? ' atelier-nav-active' : ''}`}
+            data-panel-open
+            data-focus-fallback=""
+            title={current ? `Fiches projet (ouverte : ${current.name})` : 'Fiches projet'}
+            aria-expanded={panelOpen}
+            onClick={onOpenPanel}
+          >
+            <LayoutList aria-hidden />
+            Fiches projet
+          </button>
+          <button type="button" className="nav-link side-rail-only" title="Nouvelle fiche projet" onClick={onNewProject}>
+            <Plus aria-hidden />
+            Nouvelle fiche projet
+          </button>
+        </nav>
+        <div className="side-group">
+          <div className="side-section">
+            <span className="side-section__title" id="fiches-title">
+              Fiches projet
+            </span>
+            <span className="side-section__count">{projects.length > 0 ? projects.length : ''}</span>
+            <button type="button" className="btn btn--ghost btn--icon btn--sm" aria-label="Nouvelle fiche projet" title="Nouvelle fiche projet" onClick={onNewProject}>
+              <Plus />
+            </button>
+          </div>
+          <nav className="side-nav" aria-labelledby="fiches-title">
+            {loading && projects.length === 0 && (
+              <>
+                <div className="skeleton" />
+                <div className="skeleton skeleton--short" />
+              </>
+            )}
+            {projects.map((p) => {
+              const to = projectPath(p.slug)
+              const active = p.slug === currentSlug
+              return (
+                <a
+                  key={p.id}
+                  className={`nav-link${active ? ' atelier-nav-active' : ''}`}
+                  href={href(to)}
+                  title={p.name}
+                  aria-current={active ? 'page' : undefined}
+                  onClick={(e) => {
+                    onLinkClick(e, to)
+                    onNavigate()
+                  }}
+                >
+                  <span className="nav-link__mark" aria-hidden="true">
+                    {p.name.slice(0, 1)}
+                  </span>
+                  <span className="nav-link__text">{p.name}</span>
+                </a>
+              )
+            })}
+            {!loading && projects.length === 0 && <p className="side-note">Aucune fiche pour l’instant. Crée la première avec le bouton +.</p>}
+          </nav>
+        </div>
+      </div>
+      <div className="side-extra">
+        <button type="button" className="nav-link nav-link--quiet" title="Exemples de la suite" aria-haspopup="dialog" onClick={onExamples}>
           <BookOpen aria-hidden />
-          <span className="nav-link__text">Exemples de la suite</span>
+          Exemples de la suite
         </button>
       </div>
       <div className="sidebar__foot">
         <ThemeSwitch />
+        <ThemeCycle />
       </div>
-    </aside>
+    </>
   )
 }
 
-export function Topbar({ title, onToggleNav, navOpen, children }: { title: string; onToggleNav: () => void; navOpen: boolean; children?: ReactNode }) {
+export function Topbar({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <header className="topbar">
-      <button
-        type="button"
-        className="btn btn--ghost btn--icon topbar__mobile"
-        aria-label={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-        aria-expanded={navOpen}
-        onClick={onToggleNav}
-        data-focus-fallback=""
-      >
-        <Menu />
-      </button>
-      <span className="topbar__mobile">
-        <Brand compact />
-      </span>
+      <SuiteSwitcher />
       <p className="topbar__title">{title}</p>
       <div className="topbar__spacer" />
       {children}

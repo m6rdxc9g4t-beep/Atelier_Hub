@@ -1,6 +1,6 @@
 // Une présentation de la fiche : le Hub la rend résolue (ce qui est enregistré + les chiffres relus dans les apps).
 
-import { ArrowLeft, FileDown, Pencil, Play, Plus, RefreshCw } from 'lucide-react'
+import { ArrowLeft, FileDown, Pencil, Play, Plus, RefreshCw, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { AddSlideDialog } from '../components/PresentationDialogs.tsx'
@@ -9,6 +9,7 @@ import { ReadError, ReadMissing } from '../components/ReadState.tsx'
 import { Slide } from '../components/Slide.tsx'
 import { SlideEditor, type SlideEditorHandle } from '../components/SlideEditor.tsx'
 import { useUi } from '../components/ui.tsx'
+import { WriteDialog } from '../components/WriteDialog.tsx'
 import { ApiError } from '../lib/api.ts'
 import { applyOrder, applyRecord, moveIds, shownTitle, withoutSlide } from '../lib/deck.ts'
 import { plural } from '../lib/format.ts'
@@ -17,7 +18,8 @@ import { api } from '../lib/hub-api.ts'
 import { printDeck, printSession, printTitle, type PrintSession } from '../lib/print.ts'
 import { failureFeedback, refreshFailure } from '../lib/refresh.ts'
 import { href, onLinkClick, presentationsPath } from '../lib/router.ts'
-import type { Deck, DeckSlide, HubProject, SlideRecord } from '../lib/types.ts'
+import type { Deck, DeckSlide, HubProject, SlideRecord, WriteResult } from '../lib/types.ts'
+import { takeWriteOnOpen } from '../lib/writing.ts'
 import { READ_ONLY } from './PresentationsView.tsx'
 
 type ReadFailure = { missing: boolean; text: string }
@@ -45,6 +47,7 @@ function DeckItem({
   onSaved,
   onMove,
   onRemove,
+  onWrite,
   register,
 }: {
   slide: DeckSlide
@@ -56,6 +59,7 @@ function DeckItem({
   onSaved: (record: SlideRecord) => void
   onMove: (slide: DeckSlide, direction: -1 | 1) => void
   onRemove: (slide: DeckSlide, index: number) => void
+  onWrite: (slide: DeckSlide) => void
   register: (slideId: number, handle: SlideEditorHandle | null) => void
 }) {
   const item = useRef<HTMLLIElement>(null)
@@ -85,6 +89,7 @@ function DeckItem({
           onSaved={onSaved}
           onMove={(direction) => onMove(slide, direction)}
           onRemove={() => onRemove(slide, index)}
+          onWrite={() => onWrite(slide)}
           register={register}
         />
       )}
@@ -121,6 +126,9 @@ export function DeckView({
   const presentingNow = useRef(false)
   presentingNow.current = presenting
   const [adding, setAdding] = useState(false)
+  /** « Rédiger avec l'IA » : ouverte sur une diapositive, ou sur toute la présentation (`slideId` null). */
+  const [writing, setWriting] = useState<{ slideId: number | null } | null>(null)
+  const writeButton = useRef<HTMLButtonElement>(null)
   /** Déplacement annoncé au lecteur d'écran (« Diapositive déplacée en position 2 »). */
   const [announcement, setAnnouncement] = useState('')
   /** Éditeurs à l'écran (mode « Modifier »), par diapositive. */
@@ -218,6 +226,15 @@ export function DeckView({
   }
   const closePresenter = useCallback(() => setPresenting(false), [])
 
+  // « Créer et rédiger avec l'IA » : la présentation vient d'être créée et lue, sa fenêtre de rédaction s'ouvre. Le
+  // focus part du bouton de l'en-tête : il y reviendra à la fermeture.
+  const deckId = deck?.presentation.id ?? null
+  useEffect(() => {
+    if (deckId === null || api.demo || !takeWriteOnOpen(deckId)) return
+    writeButton.current?.focus()
+    setWriting({ slideId: null })
+  }, [deckId])
+
   const register = useCallback((slideId: number, handle: SlideEditorHandle | null) => {
     if (handle) editors.current.set(slideId, handle)
     else editors.current.delete(slideId)
@@ -252,6 +269,25 @@ export function DeckView({
     }
     if (print.current) printDeck(print.current, window)
   }
+
+  /**
+   * « Rédiger avec l'IA » : ce qui est tapé est d'abord enregistré (une saisie devient ton texte, que l'IA ne remplace
+   * pas sans la case), et une saisie que le Hub n'a pas prise empêche d'ouvrir : l'IA écrirait par-dessus.
+   */
+  const openWrite = async (slideId: number | null) => {
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    if (editors.current.size > 0 && !(await saveEdits())) {
+      showUnsaved('Une saisie n’est pas enregistrée : enregistre-la avant de faire rédiger l’IA.')
+      return
+    }
+    // Enregistrer a fait quitter le champ en cours : le focus revient au bouton, où la fenêtre le rendra en se fermant.
+    if (trigger?.isConnected) trigger.focus()
+    setWriting({ slideId })
+  }
+
+  const onWritten = useCallback((result: WriteResult) => {
+    setDeck((current) => (current ? result.slides.reduce(applyRecord, current) : current))
+  }, [])
 
   /** « Actualiser » : après les enregistrements en cours, sinon la relecture pourrait rendre le texte d'avant. */
   const refresh = async () => {
@@ -412,6 +448,10 @@ export function DeckView({
             <FileDown aria-hidden />
             Exporter en PDF
           </button>
+          <button type="button" className="btn" ref={writeButton} onClick={() => void openWrite(null)} disabled={api.demo || empty} title={api.demo ? READ_ONLY : 'Une IA écrit le texte des diapositives à partir de ce qu’elles affichent.'}>
+            <Sparkles aria-hidden />
+            Rédiger avec l’IA
+          </button>
           <button type="button" className="btn btn--primary" onClick={present} disabled={empty}>
             <Play aria-hidden />
             Présenter
@@ -439,6 +479,7 @@ export function DeckView({
               onSaved={onSaved}
               onMove={(moved, direction) => void move(moved, direction)}
               onRemove={(removed, at) => void remove(removed, at)}
+              onWrite={(target) => void openWrite(target.id)}
               register={register}
             />
           ))}
@@ -463,6 +504,19 @@ export function DeckView({
             // La partie vivante de la nouvelle diapositive se lit dans les apps : la présentation est relue.
             focusAfter.current = { id: added.id, action: 'up' }
             void load(true)
+          }}
+        />
+      )}
+
+      {writing && (
+        <WriteDialog
+          deck={deck}
+          slideId={writing.slideId}
+          onWritten={onWritten}
+          onClose={(incomplete) => {
+            setWriting(null)
+            // Arrêtée ou interrompue en route : le Hub dit ce qu'il a vraiment gardé.
+            if (incomplete) void load(true)
           }}
         />
       )}

@@ -1,11 +1,12 @@
 // Atelier Hub : coquille, liste des fiches, fiche courante et ses fenêtres.
 
 import { CircleAlert, LayoutDashboard, Plus } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 
 import { LinkDialog, ProjectDialog, SourceDialog } from './components/Dialogs.tsx'
 import { ExamplesDialog } from './components/ExamplesDialog.tsx'
+import { OnlineSwitch } from './components/OnlineSwitch.tsx'
 import { AboutDialog, Sidebar, Topbar } from './components/Shell.tsx'
 import { UiProvider, useUi } from './components/ui.tsx'
 import { localToday } from './lib/format.ts'
@@ -13,6 +14,7 @@ import { shouldRefresh } from './lib/freshness.ts'
 import { api } from './lib/hub-api.ts'
 import { failureFeedback, refreshFailure, refreshProject, type ListRead } from './lib/refresh.ts'
 import { href, navigate, onLinkClick, projectPath, useRoute } from './lib/router.ts'
+import { PANEL_LAYERS, panelCovers, panelShortcut, RAIL_QUERY } from './lib/shell.ts'
 import type { AppId, HubLink, HubProject, Overview } from './lib/types.ts'
 import { DeckView } from './views/DeckView.tsx'
 import { PresentationsView } from './views/PresentationsView.tsx'
@@ -39,6 +41,19 @@ function writeLast(slug: string): void {
 
 type DialogState = { kind: 'link'; app: AppId } | { kind: 'source' } | { kind: 'project'; project: HubProject | null } | { kind: 'examples' } | null
 
+function watchRail(notify: () => void) {
+  const media = window.matchMedia(RAIL_QUERY)
+  media.addEventListener('change', notify)
+  return () => media.removeEventListener('change', notify)
+}
+
+/** La fenêtre est-elle assez étroite pour le rail d'icônes (sous 1024 px) ? */
+function useRail(): boolean {
+  return useSyncExternalStore(watchRail, () => window.matchMedia(RAIL_QUERY).matches)
+}
+
+const railMode = () => window.matchMedia(RAIL_QUERY).matches
+
 function Hub() {
   const route = useRoute()
   const { toast, confirm } = useUi()
@@ -54,6 +69,11 @@ function Hub() {
   const loading = useRef(false)
   const [dialog, setDialog] = useState<DialogState>(null)
   const [navOpen, setNavOpen] = useState(false)
+  const rail = useRail()
+  // Tant que le panneau des fiches couvre la page (rail), le reste est inerte (règle : `panelCovers`).
+  const covered = panelCovers({ open: navOpen, rail })
+  const sidebar = useRef<HTMLElement>(null)
+  const closeNav = useCallback(() => setNavOpen(false), [])
   const loadSeq = useRef(0)
 
   const loadProjects = useCallback(async (): Promise<ListRead<HubProject>> => {
@@ -74,6 +94,37 @@ function Hub() {
   useEffect(() => {
     void loadProjects()
   }, [loadProjects])
+
+  // Panneau des fiches (ouvert par-dessus la page depuis le rail) : refermé quand la fenêtre s'élargit jusqu'à la
+  // barre complète. À l'ouverture, le focus y entre ; quand il se referme alors que le focus y était resté (Échap,
+  // « Replier », voile), il revient au bouton « Fiches projet » du rail.
+  useEffect(() => setNavOpen(false), [rail])
+  const wasOpen = useRef(false)
+  useEffect(() => {
+    const aside = sidebar.current
+    if (!aside || !railMode()) {
+      wasOpen.current = navOpen
+      return
+    }
+    if (navOpen) aside.querySelector<HTMLElement>('[data-panel-close]')?.focus()
+    else if (wasOpen.current && (document.activeElement === document.body || aside.contains(document.activeElement))) {
+      aside.querySelector<HTMLElement>('[data-panel-open]')?.focus()
+    }
+    wasOpen.current = navOpen
+  }, [navOpen])
+  // Échap referme le panneau (règle : `panelShortcut`), en phase de capture : une fenêtre ou un menu ouvert
+  // par-dessus la reçoit d'abord.
+  useEffect(() => {
+    if (!navOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (panelShortcut(e, { open: railMode(), layered: document.querySelector(PANEL_LAYERS) !== null }) === 'close') {
+        e.preventDefault()
+        setNavOpen(false)
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [navOpen])
 
   // La fiche courante vaut aussi pour ses présentations (la barre latérale la garde sélectionnée).
   const slug = route.name === 'project' || route.name === 'presentations' || route.name === 'deck' ? route.slug : null
@@ -242,21 +293,40 @@ function Hub() {
   }
 
   return (
-    <div className="shell" data-nav={navOpen ? 'open' : undefined}>
-      <a className="sr-only" href="#contenu">
+    <div className="shell" data-nav={navOpen ? 'open' : 'closed'}>
+      <a className="sr-only" href="#contenu" inert={covered}>
         Aller au contenu
       </a>
-      <Sidebar projects={projects} currentSlug={slug} loading={projectsLoading} onNewProject={() => setDialog({ kind: 'project', project: null })}
-        onExamples={() => {
-          setNavOpen(false)
-          setDialog({ kind: 'examples' })
-        }}
-        onNavigate={() => setNavOpen(false)}
-      />
-      <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />
-      <div className="main-col">
-        <Topbar title={title} navOpen={navOpen} onToggleNav={() => setNavOpen((o) => !o)}>
-          {api.demo && <span className="demo-badge" title="Données d’exemple : rien n’est enregistré">Aperçu</span>}
+      <aside ref={sidebar} className="sidebar" aria-label="Fiches projet">
+        <Sidebar
+          projects={projects}
+          currentSlug={slug}
+          loading={projectsLoading}
+          panelOpen={navOpen}
+          onOpenPanel={() => setNavOpen(true)}
+          onClosePanel={closeNav}
+          onNewProject={() => {
+            setNavOpen(false)
+            setDialog({ kind: 'project', project: null })
+          }}
+          onExamples={() => {
+            setNavOpen(false)
+            setDialog({ kind: 'examples' })
+          }}
+          onNavigate={closeNav}
+        />
+      </aside>
+      <div className="sidebar-backdrop" onClick={closeNav} aria-hidden="true" />
+      <div className="main-col" inert={covered}>
+        <Topbar title={title}>
+          {/* L'IA est désactivée en aperçu : pas d'interrupteur « Hors ligne / En ligne ». */}
+          {api.demo ? (
+            <span className="demo-badge" title="Données d’exemple : rien n’est enregistré">
+              Aperçu
+            </span>
+          ) : (
+            <OnlineSwitch />
+          )}
         </Topbar>
         <main id="contenu" className="main">
           {main}

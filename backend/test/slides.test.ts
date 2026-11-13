@@ -233,8 +233,28 @@ describe('partie vivante d’une diapositive', () => {
       ['1 déc. 2026', 'jalon Recette', false],
     ])
     assert.equal(quiet.auto_text, nb('Aucune feature terminée sur 3. 1,5 h passée, sans estimation.'))
-    const empty = live({ ...overview, kpis: { hours_spent: 0, hours_estimated: 0, features_total: 0, features_done: 0, active: 0, blocked: 0, next_due: null } }, 'kpis')
+    // Contenu du projet inconnu (Projets ne l'a pas donné) : les quatre cartes, sans phrase.
+    const zero = { hours_spent: 0, hours_estimated: 0, features_total: 0, features_done: 0, active: 0, blocked: 0, next_due: null }
+    const empty = live({ ...overview, kpis: zero, projets: { ...overview.projets, contents: null } }, 'kpis')
     assert.deepEqual([empty.figures[3]!.value, empty.figures[3]!.note, empty.auto_text], ['—', 'aucune date à venir', 'Aucun chiffre pour l’instant.'])
+  })
+
+  it('chiffres clés d’un projet sans feature : ce qu’il contient, comme la fiche, jamais « 0 / 0 »', async () => {
+    const overview = await kpiOverview()
+    const audit = { phases: 1, epics: 1, stories: 1, features: 0, tasks: 1, bugs: 1, hours_spent: 0 }
+    const kpis = { hours_spent: 0, hours_estimated: 0, features_total: 0, features_done: 0, active: 0, blocked: 0, next_due: null }
+    const noFeature = { ...overview, kpis, projets: { ...overview.projets, features: [], contents: audit } }
+    const slide = live(noFeature, 'kpis')
+    assert.deepEqual(slide.figures[1], { label: 'Éléments', value: '2', note: '1 tâche · 1 bug · aucune feature', warn: false })
+    assert.ok(!slide.figures.some((f) => f.value.includes('/')), 'aucun « 0 / 0 »')
+    assert.equal(slide.auto_text, '2 éléments (1 tâche, 1 bug), aucune feature.')
+    assert.match(live(noFeature, 'summary').auto_text, /^- Contenu : 2 éléments \(1 tâche, 1 bug\), aucune feature\.$/m)
+    // Des stories mais aucun élément : la phrase le dit, la carte compte zéro élément.
+    const bare = live({ ...noFeature, projets: { ...noFeature.projets, contents: { ...audit, tasks: 0, bugs: 0 } } }, 'kpis')
+    assert.deepEqual([bare.figures[1]!.label, bare.figures[1]!.value, bare.auto_text], ['Éléments', '0', 'Aucune feature ni tâche pour l’instant.'])
+    // Projet vide : pas de rangée de zéros (la fiche n'en montre pas non plus).
+    const vide = live({ ...noFeature, projets: { ...noFeature.projets, contents: { phases: 0, epics: 0, stories: 0, features: 0, tasks: 0, bugs: 0, hours_spent: 0 } } }, 'kpis')
+    assert.deepEqual([vide.figures, vide.auto_text], [[], 'Aucun chiffre pour l’instant.'])
   })
 
   it('features, en cours, jalons : les lignes de Projets', async () => {

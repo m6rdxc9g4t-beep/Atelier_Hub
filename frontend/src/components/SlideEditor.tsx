@@ -4,7 +4,7 @@
 // Une saisie n'est dite « enregistrée » que quand le Hub l'a : un champ en échec reste annoncé, est retenté à chaque
 // enregistrement, et rien de ce qui est tapé n'est remplacé par une réponse arrivée entre-temps (lib/deck.ts).
 
-import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 
 import type { SlidePatch } from '../lib/api.ts'
@@ -14,6 +14,7 @@ import {
   SLIDE_BODY_MAX,
   SLIDE_FIELDS,
   SLIDE_TITLE_MAX,
+  staleNotice,
   syncedDraft,
   unsavedFields,
   unsavedNotice,
@@ -25,6 +26,7 @@ import {
 import { clockTime } from '../lib/freshness.ts'
 import { api } from '../lib/hub-api.ts'
 import type { DeckSlide, SlideRecord } from '../lib/types.ts'
+import { everWritable } from '../lib/writing.ts'
 import { useUi } from './ui.tsx'
 
 /** Ce que l'écran demande à l'éditeur d'une diapositive. */
@@ -47,6 +49,7 @@ export function SlideEditor({
   onSaved,
   onMove,
   onRemove,
+  onWrite,
   register,
 }: {
   slide: DeckSlide
@@ -59,6 +62,8 @@ export function SlideEditor({
   onSaved: (record: SlideRecord) => void
   onMove: (direction: -1 | 1) => void
   onRemove: () => void
+  /** « Rédiger avec l'IA » pour cette diapositive (absent en aperçu). */
+  onWrite?: () => void
   /** L'éditeur se présente à l'écran, qui lui demande d'enregistrer avant de quitter « Modifier » ou d'imprimer. */
   register: (slideId: number, handle: SlideEditorHandle | null) => void
 }) {
@@ -273,6 +278,7 @@ export function SlideEditor({
           />
           <p id={ids.source} className="field-help">
             {provenance(slide, today)}
+            {slide.stale.length > 0 && <span className="slide-editor__stale"> · {staleNotice(slide.stale)}. Corrige-le, ou reviens à la phrase automatique.</span>}
           </p>
         </div>
       </div>
@@ -293,6 +299,12 @@ export function SlideEditor({
           {slide.body !== null && slide.kind !== 'text' && (
             <button type="button" className="btn btn--sm" onClick={() => void backToAuto()}>
               Phrase automatique
+            </button>
+          )}
+          {onWrite && everWritable(slide) && (
+            <button type="button" className="btn btn--sm" data-action="write" onClick={onWrite}>
+              <Sparkles aria-hidden />
+              Rédiger avec l’IA
             </button>
           )}
           <button type="button" className="btn btn--ghost btn--icon btn--sm" aria-label={`Monter ${name}`} title="Monter" data-action="up" disabled={index <= 0} onClick={() => onMove(-1)}>

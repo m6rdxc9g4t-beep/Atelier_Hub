@@ -60,12 +60,28 @@ export interface Milestone {
   reached: boolean
 }
 
+/**
+ * Ce que contient le projet rattaché, pour le dire quand il n'a pas encore de feature (au lieu de « 0 / 0 »).
+ * phases, epics, stories : lus dans l'arbre du projet (`/tree`) ; null si Projets ne le donne pas.
+ */
+export interface ProjetsContents {
+  phases: number | null
+  epics: number | null
+  stories: number | null
+  features: number
+  tasks: number
+  bugs: number
+  hours_spent: number
+}
+
 export interface ProjetsPanel extends PanelBase {
   project_name: string | null
   features: WorkItem[]
   active: WorkItem[]
   milestones: Milestone[]
   items_total: number
+  /** null tant que le projet n'a pas été lu (non rattaché, Projets injoignable). */
+  contents: ProjetsContents | null
 }
 
 export interface Kpis {
@@ -310,7 +326,7 @@ export interface SlideLive {
 
 export interface DeckSlide extends SlideRecord {
   live: SlideLive
-  /** Nombres d'un texte d'IA absents des chiffres du jour (toujours [] tant qu'aucun moteur ne rédige). */
+  /** « À relire » : nombres d'un texte rédigé par une IA qui ne figurent plus dans les chiffres du jour ([] pour tout autre texte). */
   stale: string[]
 }
 
@@ -320,4 +336,33 @@ export interface Deck {
   project: HubProject
   slides: DeckSlide[]
   generated_at: string
+}
+
+// ─── Rédaction par une IA ─────────────────────────────────────────
+
+export type EngineChoice = 'auto' | 'ollama' | 'claude'
+export type AiEngineName = 'ollama' | 'claude'
+export const CLAUDE_MODELS = ['sonnet', 'opus', 'haiku'] as const
+export type ClaudeModel = (typeof CLAUDE_MODELS)[number]
+
+/** État des moteurs. Hors ligne, Claude n'est pas interrogé : `available` et `installed` sont faux, `error` dit pourquoi. */
+export interface AiStatus {
+  online: boolean
+  /** Moteur que « Auto » retiendrait maintenant. */
+  auto: AiEngineName
+  ollama: { reachable: boolean; error: string | null; default_model: string; default_installed: boolean; models: { name: string; size: number }[] }
+  claude: { available: boolean; installed: boolean; mode: 'cli' | 'token'; error: string | null; warning: string | null; models: ClaudeModel[]; default_model: ClaudeModel }
+  /** Taille maximale de ce qui part vers l'IA en un appel (caractères). */
+  max_chars: number
+}
+
+export interface WriteResult {
+  engine: AiEngineName
+  model: string
+  /** Diapositives dont le texte a été rédigé et enregistré. */
+  written: number[]
+  /** Diapositives laissées telles quelles, avec la raison (français). */
+  kept: { slide_id: number; reason: string }[]
+  /** Enregistrements à jour des diapositives rédigées. */
+  slides: SlideRecord[]
 }

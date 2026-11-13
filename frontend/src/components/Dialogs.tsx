@@ -6,6 +6,7 @@ import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from '
 import { SOURCE_LABELS } from '../lib/format.ts'
 import { api } from '../lib/hub-api.ts'
 import type { ProjectInput } from '../lib/api.ts'
+import { emptyPicks, freeProjets, fromProjet, isServerHost } from '../lib/linking.ts'
 import { appName } from '../lib/suite.ts'
 import { tabTarget } from '../lib/tabs.ts'
 import type { AppId, Candidate, Catalog, HubProject, Overview, SourceKind } from '../lib/types.ts'
@@ -173,7 +174,13 @@ export function LinkDialog({ overview, initialApp, onClose, onChanged }: { overv
               </>
             )}
             {catalog?.state === 'down' && <p className="panel__down">{catalog.message}</p>}
-            {catalog?.state === 'ok' && catalog.candidates.length === 0 && <p className="dialog__text">Rien ne correspond.</p>}
+            {catalog && catalog.state !== 'down' && catalog.candidates.length === 0 && (
+              <div className="picks__empty">
+                {emptyPicks(app, catalog, q, isServerHost(window.location.hostname)).map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            )}
             {binds.length > 0 && (
               <>
                 <p className="picks__heading">
@@ -297,17 +304,33 @@ export function ProjectDialog({
   const [from, setFrom] = useState<Candidate | null>(null)
   const [projets, setProjets] = useState<Candidate[] | null>(null)
   const [saving, setSaving] = useState(false)
-  const ids = { name: useId(), description: useId(), keywords: useId() }
+  const ids = { name: useId(), description: useId(), keywords: useId(), from: useId() }
 
+  const [projetsMessage, setProjetsMessage] = useState<string | null>(null)
+
+  // Nouvelle fiche : les projets d'Atelier Projets qu'aucune fiche n'a encore rattachés.
   useEffect(() => {
     if (project) return
     const controller = new AbortController()
-    api
-      .catalog('projets', '', controller.signal)
-      .then((c) => setProjets(c.state === 'ok' ? c.candidates : []))
-      .catch(() => setProjets([]))
+    Promise.all([api.catalog('projets', '', controller.signal), api.listProjects()])
+      .then(([c, fiches]) => {
+        setProjets(c.state === 'ok' ? freeProjets(c.candidates, fiches) : [])
+        setProjetsMessage(c.state === 'ok' ? null : c.message)
+      })
+      .catch((error: Error) => {
+        if (error.name === 'AbortError') return
+        setProjets([])
+        setProjetsMessage(error.message)
+      })
     return () => controller.abort()
   }, [project])
+
+  const pick = (next: Candidate | null) => {
+    const filled = fromProjet({ name, description }, from, next)
+    setFrom(next)
+    setName(filled.name)
+    setDescription(filled.description)
+  }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -348,27 +371,31 @@ export function ProjectDialog({
     <Modal title={project ? 'Modifier la fiche' : 'Nouvelle fiche projet'} onClose={onClose} labelId="project-title">
       <form onSubmit={submit}>
         <div className="dialog__body">
-          {!project && projets && projets.length > 0 && (
+          {!project && (
             <div className="form-row">
-              <span className="label">Partir d’un projet d’Atelier Projets</span>
-              <ul className="chips">
-                {projets.slice(0, 8).map((c) => (
-                  <li key={c.ref}>
-                    <button
-                      type="button"
-                      className="chip"
-                      aria-pressed={from?.ref === c.ref}
-                      onClick={() => {
-                        const next = from?.ref === c.ref ? null : c
-                        setFrom(next)
-                        if (next && (!name.trim() || name === from?.label)) setName(next.label)
-                      }}
-                    >
-                      {c.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <span className="label" id={ids.from}>
+                Partir d’un projet d’Atelier Projets <span className="label__opt">facultatif</span>
+              </span>
+              {projets === null ? (
+                <div className="skeleton" />
+              ) : projets.length === 0 ? (
+                <p className="field-help">{projetsMessage ?? 'Tous les projets d’Atelier Projets ont déjà leur fiche. Tu peux aussi créer une fiche sans projet.'}</p>
+              ) : (
+                <ul className="picks picks__list from-projets" aria-labelledby={ids.from}>
+                  {projets.map((c) => (
+                    <li key={c.ref}>
+                      <button type="button" className="pick" aria-pressed={from?.ref === c.ref} onClick={() => pick(from?.ref === c.ref ? null : c)}>
+                        <span className="pick__body">
+                          <span className="pick__label">{c.label}</span>
+                          {c.detail && <span className="pick__detail">{c.detail}</span>}
+                        </span>
+                        <span className="pick__state">{from?.ref === c.ref ? <Check aria-label="Choisi" /> : 'Choisir'}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {from && <p className="field-help">La fiche sera rattachée à « {from.label} » : ses features, ses tâches et son temps passé s’y afficheront.</p>}
             </div>
           )}
           <div className="form-row">

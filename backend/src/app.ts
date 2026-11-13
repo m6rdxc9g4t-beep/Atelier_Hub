@@ -10,8 +10,10 @@ import type { Fetcher } from './connectors/http.js'
 import type { Db } from './db/database.js'
 import { ApiError } from './http/errors.js'
 import { isAllowedHost, isAllowedOrigin, isWrite } from './http/guards.js'
+import { aiRoutes } from './routes/ai.js'
 import { hubRoutes } from './routes/hub.js'
 import { presentationRoutes } from './routes/presentations.js'
+import { createAi, type AiDeps } from './services/ai.js'
 import { localToday, type SuiteContext } from './services/overview.js'
 
 export interface BuildOptions {
@@ -20,6 +22,8 @@ export interface BuildOptions {
   /** Lecteur HTTP des autres apps (remplacé par un double dans les tests). */
   fetch?: Fetcher
   today?: () => string
+  /** Moteurs d'IA (remplacés par des doubles dans les tests et pour l'aperçu) ; sans eux, les vrais, d'après `config.ai`. */
+  ai?: AiDeps
   logger?: boolean
 }
 
@@ -59,6 +63,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   app.get('/api/health', async () => ({ status: 'ok', app: 'atelier-hub' }))
   hubRoutes(app, db, suite)
   presentationRoutes(app, db, suite)
+  aiRoutes(app, db, suite, options.ai ?? createAi(config.ai))
 
   if (config.staticDir && existsSync(join(config.staticDir, 'index.html'))) {
     const assetsDir = join(config.staticDir, 'assets') + sep

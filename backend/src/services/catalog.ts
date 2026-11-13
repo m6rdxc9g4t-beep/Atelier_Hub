@@ -17,6 +17,15 @@ import type { AppId, Candidate, Catalog } from '../domain/types.js'
 import type { SuiteContext } from './overview.js'
 
 const LIMIT = 60
+
+/**
+ * Index de Tab absent : le Hub ne peut rien lister de Tab (ce n'est pas « rien ne correspond »). Le même texte sert
+ * au panneau Tab de la fiche ; l'interface ajoute ce que cela veut dire sur un serveur (`lib/suite.ts`).
+ */
+export const TAB_NO_INDEX = 'Le Hub ne trouve aucune table d’Atelier Tab à lire ici : l’index de Tab est absent (Tab n’y a encore rien écrit).'
+
+/** L'app répond (ou n'a pas à répondre) mais n'a rien que le Hub puisse lire : onglet « off » avec l'explication. */
+class NothingToRead extends Error {}
 const APP_NAMES: Record<AppId, string> = {
   projets: 'Atelier Projets',
   wiki: 'Atelier Wiki',
@@ -66,7 +75,8 @@ async function candidatesFor(ctx: SuiteContext, app: AppId, q: string): Promise<
       ]
     }
     case 'tab': {
-      const tables = (await tabTables(apps.tab.exportsDir)) ?? []
+      const tables = await tabTables(apps.tab.exportsDir)
+      if (tables === null) throw new NothingToRead(TAB_NO_INDEX)
       const projects = [...new Set(tables.map((t) => t.project).filter((p): p is string => Boolean(p)))].sort((a, b) => a.localeCompare(b, 'fr'))
       return [
         ...projects.map<Candidate>((p) => ({ app, kind: 'project', ref: p, label: p, detail: 'Projet Tab', bind: true })),
@@ -85,6 +95,7 @@ export async function buildCatalog(ctx: SuiteContext, app: AppId, q: string): Pr
     const candidates = await candidatesFor(ctx, app, q)
     return { state: 'ok', message: null, candidates: app === 'wiki' && q.trim() ? candidates.slice(0, LIMIT) : filter(candidates, q) }
   } catch (error) {
+    if (error instanceof NothingToRead) return { state: 'off', message: error.message, candidates: [] }
     return { state: 'down', message: describeFailure(APP_NAMES[app], error), candidates: [] }
   }
 }

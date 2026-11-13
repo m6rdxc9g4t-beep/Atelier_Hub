@@ -15,9 +15,15 @@ Une fiche par projet qui rassemble ce que la Suite Atelier en sait, sur un seul 
 
 Le Hub ne recopie aucune donnée : il garde des **références** (projet Projets, espace Wiki, projet Tab, éléments épinglés, sources) et relit les apps à chaque ouverture de fiche, en parallèle et avec un délai borné. Quand tu reviens sur l'onglet du Hub après un passage dans une app, la fiche se relit toute seule si sa lecture date de plus de 30 secondes (le bouton « Actualiser » dit l'heure de la dernière lecture). Une app arrêtée garde son panneau (icône éteinte, message en rouge) et ses éléments épinglés restent cliquables.
 
+## Coquille
+
+Même barre latérale qu'Atelier Viz et Atelier Tab : 232 px, marque « Atelier Hub » en tête (un clic : « À propos »), puis la zone qui défile — « Fiches projet » (compteur, « + » pour une nouvelle fiche, la liste) — et au pied « Exemples de la suite » puis le thème (Système / Clair / Sombre, préférence commune à la suite). Le sélecteur « Suite Atelier » ouvre la barre haute, avant le titre, comme dans Viz. Sous 1024 px (fenêtre étroite, tablette, téléphone), la barre devient un rail d'icônes de 48 px comme celui de Viz ; le bouton « Fiches projet » ouvre la liste complète par-dessus la page, comme le tiroir de Tab (Échap ou « Replier le panneau » la referme, le reste de la page est inerte tant qu'elle est ouverte).
+
 ## Comment une fiche trouve ses éléments
 
-1. **Rattachements** (bandeau sous le titre) : un projet d'Atelier Projets, un espace du Wiki, un projet de Tab.
+1. **Rattachements** (bandeau sous le titre) : un projet d'Atelier Projets, un espace du Wiki, un projet de Tab. Une pastille « non rattaché » ouvre « Lier » sur son app ; chaque onglet de « Lier » liste tout ce que l'app propose sans rien taper, et la recherche filtre par nom sans casse ni accents. « Nouvelle fiche » peut partir d'un projet d'Atelier Projets qu'aucune fiche n'a encore : son nom et sa description sont repris, le projet est rattaché d'emblée.
+   Un projet rattaché qui n'a pas encore de feature n'affiche pas « 0 / 0 » : le panneau Projets dit ce qu'il contient (phases, epics, stories, tâches, bugs, temps passé) et ce qu'il faut y créer, avec le lien ; la carte « Features » devient « Éléments ». Un projet vide n'a pas de chiffres clés.
+   **Tab sur le serveur** : le Hub lit l'index des tables écrites sur le serveur (par Convert ou Nexus). Les tables ouvertes dans Tab depuis le navigateur restent dans le navigateur (IndexedDB) et le Hub ne peut pas les voir : l'onglet Tab de « Lier » et le panneau Tab le disent.
 2. **Épinglés** (« + » de chaque panneau, ou « Lier un élément ») : une page, un rapport, un jeu de données, une table, une conversion, un agent.
 3. **Mots-clés** de la fiche (par défaut son nom) : un rapport, une table, une conversion ou un jeu de Viz dont le nom les contient apparaît aussi (mots entiers, sans casse ni accents : « KPI CGO » trouve « KPI CGO — Tableau mensuel » et `kpi_cgo_budget_2026`). Sans espace Wiki rattaché, le Wiki est cherché avec le premier mot-clé.
 
@@ -57,10 +63,26 @@ Depuis une fiche, « Présentations » ouvre ses présentations : des diapositiv
 | | Ce que c'est | Où ça vit | Fraîcheur |
 |---|---|---|---|
 | **Structure** | quelles diapositives, dans quel ordre, de quelle sorte, visant quel élément | base du Hub (`presentations`, `slides`) | contenu du Hub |
-| **Texte rédigé** | le titre et le texte que tu as écrits | base du Hub (`slides.title`, `slides.body`), avec sa provenance et sa date | **daté**, jamais mis à jour tout seul |
+| **Texte rédigé** | le titre et le texte que tu as écrits, le texte écrit par une IA | base du Hub (`slides.title`, `slides.body`), avec sa provenance (toi, Ollama ou Claude, et le modèle) et sa date | **daté**, jamais mis à jour tout seul |
 | **Chiffres vivants** | cartes de chiffres, listes, états, liens, titre automatique, phrase automatique | **nulle part** : calculés à chaque lecture, les apps sont relues | toujours du jour |
 
 Une diapositive **référence, elle ne copie pas** : elle garde sa sorte et, si elle vise un élément, son identifiant dans son app et son libellé au moment du choix (affiché si l'app ne répond pas, comme pour un élément épinglé). Aucun chiffre, aucune ligne, aucun extrait n'entre dans la base. Un titre ou un texte laissé vide est **automatique** : relu et recalculé à chaque ouverture, donc toujours juste. Ce que tu écris, lui, reste tel quel : l'éditeur le rappelle sous le champ (« Ton texte, modifié le 12 nov. »). Si un élément visé n'est plus dans la fiche, sa diapositive le dit au lieu de montrer un ancien chiffre.
+
+### Rédiger avec l'IA
+
+Une présentation est complète et juste sans IA : chaque diapositive a sa phrase automatique. « Rédiger avec l'IA » (en-tête d'une présentation, ou sous une diapositive en mode « Modifier ») la remplace par un commentaire écrit par un modèle ; « Créer et rédiger avec l'IA », dans « Nouvelle présentation », crée le plan puis ouvre la même fenêtre. L'IA n'écrit que le **texte** des diapositives : ni titres, ni choix ou ordre des diapositives, ni chiffres affichés.
+
+- **Moteur : Auto · Ollama · Claude.** Ollama (local) est le moteur par défaut : avec lui, rien ne quitte la machine qui héberge le Hub (son adresse est imposée en bouclage). Claude n'est proposé qu'en mode **« En ligne »** ; « Auto » retient Claude si le Hub est en ligne et Claude disponible, sinon Ollama. Le choix et le modèle sont mémorisés par navigateur (`localStorage["atelier-hub:ia"]`). L'interface demande toujours au Hub le moteur qu'elle vient d'annoncer, jamais « auto » : si l'état a changé entre-temps, le Hub refuse avec sa raison au lieu de répondre par un autre moteur.
+- **Hors ligne / En ligne** (interrupteur de la barre haute) : **hors ligne par défaut**. Hors ligne, rien ne part vers Claude : son choix est grisé avec l'explication, une demande explicite est refusée (403), son état n'est même pas demandé. Seul toi changes le mode, depuis cette machine ou un hôte déclaré (`ALLOWED_HOSTS`) ; le mode est gardé dans la base du Hub.
+- **Claude** = la CLI Claude Code de la machine qui héberge le Hub, par **l'abonnement** de son compte (jamais une clé d'API) : `claude auth login` une fois dans un terminal, puis le Hub la trouve (`CLAUDE_CLI` : chemin absolu, sinon le `PATH`, puis `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`). Elle est lancée **isolée**, comme dans Atelier Projets et Atelier Viz : `claude -p --safe-mode --tools "" --strict-mcp-config --disable-slash-commands --no-session-persistence`, prompt système du Hub, réponse contrainte par un schéma, dans un dossier temporaire vide, avec un environnement réduit à une liste blanche (ni clé Anthropic, ni réglage du Hub). Elle n'a **aucun outil** : elle ne lit ni fichier ni page, elle reçoit seulement, sur son entrée standard, ce que dit la ligne bouclier. Absente ou non connectée, « Claude » reste grisé avec la raison (« Claude CLI non connectée : lance « claude auth login » dans un terminal »). Son état est relu au plus toutes les 60 s (« Vérifier à nouveau » : au plus toutes les 10 s).
+- **Claude par le jeton du forfait** (serveur, VPS) : sur une machine sans session `claude` connectée, le Hub peut utiliser ton forfait Claude par le jeton que `claude setup-token` affiche (valable un an), donné dans `HUB_CLAUDE_OAUTH_TOKEN`. C'est la même CLI, isolée de la même façon ; elle reçoit le jeton dans son seul environnement et travaille dans un dossier privé (`<HUB_DATA_DIR>/claude-forfait/`, lisible par toi seul) au lieu de ta configuration. Le jeton est lu une fois au démarrage puis retiré de l'environnement du Hub : il n'apparaît dans aucune réponse, erreur, journal ni argument ; l'interface dit seulement « forfait par jeton ». Le mode « En ligne » reste exigé. **Usage personnel** : le jeton est lié à ton compte et puise dans les limites de **ton** forfait, **partagées** avec tes autres apps de la suite qui l'utilisent (Viz, Nexus…) et avec Claude Code lui-même. Jeton refusé ou expiré : « Claude » est grisé avec la marche à suivre (refaire `claude setup-token`, mettre à jour le jeton du serveur, redémarrer le Hub ; « Vérifier à nouveau » lui redonne sa chance) ; limite atteinte : le message de Claude Code est repris, réessaie plus tard ou passe sur Ollama.
+- **Ce qui part** (ligne bouclier, sous le choix du moteur) : seulement ce que montrent les diapositives à rédiger — le nom et la description de la fiche, ses chiffres clés, le titre de chaque diapositive, et pour chaque sorte ce qu'elle affiche (noms, statuts, heures et échéances des features ; noms et dates des jalons ; noms, tailles et dates des rapports, tables et conversions ; noms des agents ; noms et sortes des sources) — plus les consignes que tu écris. **Jamais** : une adresse, un chemin, une note de source, un identifiant, le contenu d'une table ou d'un rapport, ni le contenu d'une page du Wiki (du Wiki, les **titres** et les dates seulement ; la diapositive d'une page n'est pas rédigée). 12 000 caractères au plus par appel (`HUB_AI_MAX_CHARS`), 3 000 vers Ollama.
+- **Ce qui est rédigé** : une diapositive vivante dont l'app répond. Gardent leur texte : un texte libre (pas de données à commenter), une diapositive dont l'app ne répond pas, et **tes textes**, sauf si tu coches « Réécrire aussi mes textes ».
+- **Progression et arrêt** : une diapositive par requête avec Ollama (« Diapositive 3 sur 9 · 42 s »), douze avec Claude. « Arrêter » abandonne la requête en cours (le Hub interrompt l'appel au modèle) ; ce qui est déjà rédigé reste. Une requête qui échoue (Ollama arrêté, modèle absent, délai) arrête la suite et le dit dans la fenêtre.
+- **Vérification des nombres** : chaque nombre d'une réponse doit figurer dans les faits de sa diapositive ou dans les chiffres clés ; sinon le modèle est relancé une fois, puis le texte est **retiré** : la diapositive garde le sien, et la fenêtre liste ces diapositives avec la raison (« chiffre non vérifiable : 75 % », « réponse illisible »). Avec un petit modèle local, attends-toi à ce que plusieurs diapositives gardent leur phrase automatique.
+- **Provenance et « à relire »** : un texte d'IA est enregistré tout de suite, marqué sous lui (« Rédigé par Ollama (llama3.2:1b) le 12 nov. ») ; « Phrase automatique », en mode « Modifier », le retire d'un clic. À chaque lecture, ses nombres sont recomparés aux chiffres du jour : « Texte à relire : 63 % ne correspond plus aux chiffres du jour ». Ces deux notes ne paraissent ni en plein écran ni dans le PDF.
+
+**Ce que la vérification ne fait pas.** Elle refuse un nombre qui n'apparaît nulle part dans les faits de la diapositive ; elle ne sait pas si un nombre présent est attribué à la bonne chose (« 12 features » passe si « 12 h » figure dans les faits), ni lire un nombre écrit en lettres. Elle est stricte : une date écrite « 12/11 » ou un arrondi différent fait retirer un texte juste. « À relire » repose sur la même comparaison : il ne s'allume pas si l'ancien chiffre figure encore ailleurs sur la diapositive. C'est une aide, pas une garantie : la diapositive montre toujours les chiffres vivants à côté du texte, relis ce que l'IA a écrit.
 
 ## Lancer en local
 
@@ -76,7 +98,7 @@ npm run build
 npm start          # http://127.0.0.1:3700
 ```
 
-Aperçu sans la suite (données d'exemple « KPI CGO » et fiche de l'histoire « Studio Garance », lecture seule : « Exemples de la suite » s'y consulte, « Créer la fiche » y est inactif) :
+Aperçu sans la suite (données d'exemple « KPI CGO » et fiche de l'histoire « Studio Garance », lecture seule, figé au 10 novembre 2026 : « Exemples de la suite » s'y consulte, « Créer la fiche » y est inactif ; l'IA y est désactivée, mais la présentation de « KPI CGO » y porte trois textes rédigés par le faux Ollama des tests, dont un « à relire ») :
 
 ```bash
 cd backend && npx tsx scripts/demo-snapshot.ts && cd ..   # régénère frontend/src/demo/snapshot.json
@@ -98,6 +120,13 @@ npm run build:demo                                         # frontend/dist-demo/
 | `CONVERT_API_URL` / `CONVERT_URL` | `http://127.0.0.1:8010` / idem | Atelier Convert |
 | `NEXUS_API_URL` / `NEXUS_URL` | `http://127.0.0.1:8100` / `http://127.0.0.1:3100` | Atelier Nexus |
 | `TAB_EXPORTS_DIR` / `TAB_URL` | `~/Atelier_Tab/exports` / `http://127.0.0.1:4175` | Atelier Tab (index `_atelier/index.json`, §7.3) |
+| `OLLAMA_URL` (sinon `OLLAMA_BASE_URL`) | `http://127.0.0.1:11434` | Ollama, pour la rédaction des présentations. **Sur cette machine seulement** : une autre adresse ne bloque pas le démarrage, elle désactive Ollama |
+| `OLLAMA_MODEL` | `llama3.1:8b` | Modèle d'Ollama par défaut |
+| `OLLAMA_TIMEOUT_MS` / `OLLAMA_NUM_CTX` | `120000` / `8192` | Délai d'un appel à Ollama ; fenêtre de contexte demandée |
+| `CLAUDE_CLI` | `claude` | Exécutable de Claude Code : un nom cherché dans le `PATH` (sans entrée relative ni `node_modules/.bin`) puis dans `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, ou un **chemin absolu** (un chemin relatif est refusé) |
+| `CLAUDE_TIMEOUT_MS` | `180000` | Délai d'une réponse de Claude |
+| `HUB_CLAUDE_OAUTH_TOKEN` | (vide) | Jeton de `claude setup-token` : Claude par ton forfait sur une machine sans session `claude` (VPS). Lu une fois, retiré de l'environnement, jamais montré ; vide = la session `claude` de la machine |
+| `HUB_AI_MAX_CHARS` | `12000` | Taille maximale de ce qui part vers une IA en un appel (3 000 au plus vers Ollama) |
 
 Sur le VPS : les `*_API_URL` restent en bouclage, les `*_URL` deviennent les sous-domaines de la suite. Adresses du sélecteur « Suite Atelier » (compilées dans l'interface) : `VITE_ATELIER_*_URL`, comme dans les autres apps.
 
@@ -105,7 +134,7 @@ Sur le VPS : les `*_API_URL` restent en bouclage, les `*_URL` deviennent les sou
 
 | App | Routes |
 |---|---|
-| Projets | `GET /api/atelier/projects`, `…/projects/{id}/work-items`, `…/projects/{id}/milestones` (nœud `atelier-node/1`) |
+| Projets | `GET /api/atelier/projects`, `…/projects/{id}/work-items`, `…/projects/{id}/milestones`, `…/projects/{id}/tree` (nombre de phases, d'epics et de stories ; nœud `atelier-node/1`) |
 | Wiki | `GET /api/atelier/spaces`, `GET /api/atelier/pages?space_id=`, `POST /api/atelier/search` |
 | Viz | `GET /api/reports`, `GET /api/datasets` |
 | Convert | `GET /api/conversions` |
@@ -144,6 +173,9 @@ Tab (app de bureau) n'a pas d'adresse par table : le clic ouvre Tab. Toutes ces 
 | `POST /api/presentations/:pid/slides` | `{ kind, title?, body?, ref?, ref_label?, after? }` : ajoute une diapositive (40 au plus, 409 au-delà). `ref` seulement pour `wiki`, `viz`, `tab`, `convert`, `nexus`, avec `ref_label` |
 | `PATCH /api/presentations/:pid/slides/:sid` | `{ title?, body? }` : vide ou `null` = automatique ; un texte écrit devient `manual`, daté. La sorte et l'élément visé ne changent pas |
 | `DELETE /api/presentations/:pid/slides/:sid`, `PUT /api/presentations/:pid/order` | Supprimer une diapositive ; nouvel ordre `{ slide_ids }` (chaque diapositive une seule fois, 422 sinon) |
+| `POST /api/presentations/:pid/write` | `{ slide_ids (1 à 12), engine?: auto \| ollama \| claude, model?, claude_model?: sonnet \| opus \| haiku, instructions? (500 car.), overwrite_manual? }` : une IA rédige le texte (`body`) de ces diapositives à partir de ce qu'elles affichent. Chaque nombre de la réponse est vérifié contre ces faits (une relance, puis retrait). Réponse : `{ engine, model, written, kept: [{ slide_id, reason }], slides }`. `claude` hors ligne : 403 `CLAUDE_OFFLINE` ; moteur indisponible : 502 (`AI_UNAVAILABLE`, `AI_MODEL_MISSING`, `CLAUDE_UNAVAILABLE`, `AI_ERROR`), 504 `AI_TIMEOUT` |
+| `GET /api/ai/status?refresh=` | État des moteurs : mode en ligne, Ollama (joignable, modèles installés), Claude (jamais interrogé hors ligne), moteur que « Auto » retiendrait |
+| `PUT /api/settings/online-mode` | `{ online }` : seul moyen de passer « En ligne » (hors ligne par défaut ; hors ligne, rien ne part vers Claude) |
 | `GET /api/health` | `{ status: "ok", app: "atelier-hub" }` |
 
 Erreurs `{ detail, code }` en français. Gardes Host / Origin comme le Wiki (hôte inconnu ou écriture d'une autre origine → 403).
@@ -166,7 +198,9 @@ backend/   Fastify + TypeScript + SQLite (better-sqlite3)
   src/domain/      règles pures : mots-clés, synthèse Projets, classement des agents, liens profonds, exemples,
                    diapositives (slides.ts : partie vivante de chaque sorte ; plan.ts : plan proposé)
   src/services/    fiches et épinglés, vue d'ensemble, catalogue « Lier », exemples de la suite,
-                   présentations (presentations.ts : seul à écrire ; decks.ts : lecture résolue)
+                   présentations (presentations.ts : seul à écrire ; decks.ts : lecture résolue),
+                   rédaction par une IA (writing.ts, ai.ts, settings.ts : mode en ligne)
+  src/ai/          seul dossier qui parle à un moteur (ollama.ts, claude.ts) ; consignes et contrôle d'une réponse
   test/fixtures/   double de la suite (aussi utilisé pour l'aperçu)
 frontend/  React + TypeScript + Vite, CSS natif
   src/views/ProjectView.tsx   la fiche et ses panneaux
@@ -174,5 +208,8 @@ frontend/  React + TypeScript + Vite, CSS natif
   src/views/PresentationsView.tsx, DeckView.tsx   présentations d'une fiche, lecture et édition d'une présentation
   src/components/Slide.tsx, Presenter.tsx, SlideEditor.tsx   la diapositive, le plein écran, l'éditeur
                               (règles : src/lib/deck.ts, presenter.ts, print.ts ; styles : src/styles/slides.css)
+  src/components/WriteDialog.tsx, EnginePicker.tsx, OnlineSwitch.tsx   « Rédiger avec l'IA », le choix du moteur et
+                              la ligne bouclier, l'interrupteur « Hors ligne / En ligne »
+                              (règles : src/lib/engine.ts, writing.ts ; état des moteurs : src/lib/ai-status.ts)
   src/lib/                    API, aperçu, frise, mise en forme, routeur
 ```
