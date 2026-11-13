@@ -48,7 +48,7 @@ export function generalFacts(overview: Overview): string[] {
   const facts = [fact(`Fiche : ${project.name}`)]
   const description = project.description.trim()
   if (description) facts.push(fact(`Description : ${shortened(description.replace(/\s+/g, ' '), FACT_LIMITS.description)}`))
-  if (overview.projets.state === 'ok' && overview.kpis) facts.push(...kpiFigures(overview.kpis).map(figureFact))
+  if (overview.projets.state === 'ok' && overview.kpis) facts.push(...kpiFigures(overview.kpis, overview.projets.contents).map(figureFact))
   return facts
 }
 

@@ -54,6 +54,13 @@ describe('faits d’une diapositive', () => {
     ])
     const long = generalFacts({ ...overview, project: { ...overview.project, description: 'Suivi des indicateurs. '.repeat(60) } })
     assert.ok(long[1]!.length <= FACT_LIMITS.perFact, String(long[1]!.length))
+    // Projet sans feature : les faits disent ce qu'il contient, jamais « Features : 0 / 0 » (comme la fiche).
+    const kpis = { hours_spent: 0, hours_estimated: 0, features_total: 0, features_done: 0, active: 0, blocked: 0, next_due: null }
+    const noFeature = { ...overview, kpis, projets: { ...overview.projets, contents: { phases: 1, epics: 1, stories: 1, features: 0, tasks: 1, bugs: 1, hours_spent: 0 } } }
+    const general = generalFacts(noFeature)
+    assert.ok(general.includes('Éléments : 2 (1 tâche · 1 bug · aucune feature)'), general.join(' | '))
+    assert.ok(!general.some((line) => line.startsWith('Features')))
+    assert.ok(slideFacts(slide(noFeature, 'kpis')).includes('2 éléments (1 tâche, 1 bug), aucune feature.'))
     // Projets arrêté : pas de chiffres clés ; description vide : pas de ligne.
     assert.deepEqual(generalFacts({ ...overview, kpis: null, projets: { ...overview.projets, state: 'down' }, project: { ...overview.project, description: ' ' } }), ['Fiche : KPI CGO'])
   })

@@ -16,6 +16,7 @@ import {
   type Milestone,
   type Overview,
   type PanelBase,
+  type ProjetsContents,
   type PresentationSummary,
   type ReportItem,
   type SlideFigure,
@@ -220,12 +221,29 @@ function milestonesText(milestones: readonly Milestone[], today: string): string
   return sentences.join(' ')
 }
 
-/** Cartes des chiffres clés : les mêmes sur la diapositive « Chiffres clés » et dans les faits généraux donnés à l'IA. */
-export function kpiFigures(k: Kpis): SlideFigure[] {
+/** Projet sans rien dedans (ni phase, ni epic, ni story, ni élément) : pas de rangée de zéros, comme sur la fiche. */
+export const isEmptyContents = (c: ProjetsContents) => !c.phases && !c.epics && !c.stories && c.features + c.tasks + c.bugs === 0
+
+/** Sans feature, « 0 / 0 terminées » ne dit rien : la fiche et la diapositive comptent alors ce que le projet contient. */
+const withoutFeature = (k: Kpis, contents: ProjetsContents | null): contents is ProjetsContents => k.features_total === 0 && contents !== null
+
+/** « 1 tâche · 1 bug · aucune feature » : la note de la carte « Éléments » (la même que sur la fiche). */
+const contentsNote = (c: ProjetsContents) =>
+  [c.tasks ? pluralText(c.tasks, 'tâche', 'tâches') : null, c.bugs ? pluralText(c.bugs, 'bug', 'bugs') : null, 'aucune feature'].filter(Boolean).join(' · ')
+
+/**
+ * Cartes des chiffres clés : les mêmes sur la diapositive « Chiffres clés » et dans les faits généraux donnés à l'IA,
+ * et les mêmes règles que la rangée de la fiche (`Kpis` de `ProjectView.tsx`) : aucune carte pour un projet vide,
+ * « Éléments » à la place de « Features 0 / 0 » pour un projet sans feature. `contents` : null si Projets ne l'a pas lu.
+ */
+export function kpiFigures(k: Kpis, contents: ProjetsContents | null): SlideFigure[] {
+  if (contents && isEmptyContents(contents)) return []
   const ratio = percentText(k.hours_spent, k.hours_estimated)
   return [
     figure('Temps passé', hoursText(k.hours_spent), k.hours_estimated > 0 ? `sur ${hoursText(k.hours_estimated)} estimées${ratio ? ` · ${ratio}` : ''}` : 'aucune estimation'),
-    figure('Features', `${countText(k.features_done)} / ${countText(k.features_total)}`, 'terminées'),
+    withoutFeature(k, contents)
+      ? figure('Éléments', countText(contents.tasks + contents.bugs), contentsNote(contents))
+      : figure('Features', `${countText(k.features_done)} / ${countText(k.features_total)}`, 'terminées'),
     figure('En cours', countText(k.active), k.blocked > 0 ? `dont ${pluralText(k.blocked, 'bloquée', 'bloquées')}` : 'rien de bloqué', k.blocked > 0),
     figure('Prochaine échéance', k.next_due ? shortDate(k.next_due.date) : '—', k.next_due ? `${k.next_due.kind === 'milestone' ? 'jalon ' : ''}${k.next_due.label}` : 'aucune date à venir'),
   ]
@@ -236,9 +254,21 @@ const featuresDone = (k: Kpis) =>
     ? `Aucune feature terminée sur ${countText(k.features_total)}`
     : `${pluralText(k.features_done, 'feature terminée', 'features terminées')} sur ${countText(k.features_total)} (${percentText(k.features_done, k.features_total)})`
 
-function kpisText(k: Kpis): string {
+/** « 2 éléments (1 tâche, 1 bug), aucune feature » ; null pour un projet vide ou quand il a des features. */
+function contentsSentence(k: Kpis, contents: ProjetsContents | null): string | null {
+  if (!withoutFeature(k, contents) || isEmptyContents(contents)) return null
+  const n = contents.tasks + contents.bugs
+  if (n === 0) return 'Aucune feature ni tâche pour l’instant'
+  const parts = [contents.tasks ? pluralText(contents.tasks, 'tâche', 'tâches') : null, contents.bugs ? pluralText(contents.bugs, 'bug', 'bugs') : null].filter(Boolean).join(', ')
+  return `${pluralText(n, 'élément', 'éléments')} (${parts}), aucune feature`
+}
+
+function kpisText(k: Kpis, contents: ProjetsContents | null): string {
+  if (contents && isEmptyContents(contents)) return 'Aucun chiffre pour l’instant.'
   const sentences: string[] = []
   if (k.features_total > 0) sentences.push(`${featuresDone(k)}.`)
+  const elements = contentsSentence(k, contents)
+  if (elements) sentences.push(`${capitalized(elements)}.`)
   const spent = `${hoursText(k.hours_spent)} ${agree(k.hours_spent, 'passée', 'passées')}`
   if (k.hours_estimated > 0) {
     sentences.push(`${spent} sur ${hoursText(k.hours_estimated)} ${agree(k.hours_estimated, 'estimée', 'estimées')} (${percentText(k.hours_spent, k.hours_estimated)}).`)
@@ -253,7 +283,7 @@ function resolveKpis(record: SlideRecord, overview: Overview): SlideLive {
   live.url_label = openProjets(overview)
   if (panel.state !== 'ok') return { ...live, state: panel.state, message: panel.message }
   if (!overview.kpis) return { ...live, auto_text: 'Aucun chiffre pour l’instant.' }
-  return { ...live, figures: kpiFigures(overview.kpis), auto_text: kpisText(overview.kpis) }
+  return { ...live, figures: kpiFigures(overview.kpis, panel.contents), auto_text: kpisText(overview.kpis, panel.contents) }
 }
 
 // ─── Fiche : titre, synthèse, sources ────────────────────────────
@@ -271,6 +301,8 @@ function summaryText(overview: Overview): string {
   const k = overview.kpis
   if (k) {
     if (k.features_total > 0) lines.push(`Avancement : ${featuresDone(k).replace(/^Aucune/, 'aucune')}.`)
+    const elements = contentsSentence(k, overview.projets.contents)
+    if (elements) lines.push(`Contenu : ${elements.replace(/^Aucune/, 'aucune')}.`)
     if (k.active > 0) lines.push(`${pluralText(k.active, 'élément en cours', 'éléments en cours')}, ${k.blocked > 0 ? `dont ${pluralText(k.blocked, 'bloqué', 'bloqués')}` : 'rien n’est bloqué'}.`)
     if (k.next_due) lines.push(`Prochaine échéance : ${quoted(k.next_due.label)}, le ${dayText(k.next_due.date)}.`)
   }
