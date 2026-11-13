@@ -10,6 +10,8 @@
 
 :root {
   --side-w: 232px;
+  /* Rail d'icônes sous 1024 px (comme Atelier Viz). */
+  --rail-w: 48px;
   --top-h: 44px;
   --row-h: 40px;
   --board-max: 1440px;
@@ -250,7 +252,11 @@ textarea.field {
   margin-top: 16px;
 }
 
-/* ── Coquille : barre latérale + barre haute + contenu ───────────────────── */
+/* ── Coquille : barre latérale + barre haute + contenu ─────────────────────
+   Même forme que dans Atelier Viz et Atelier Tab : 232 px, en-tête de 44 px (tuile de 20 px + nom), lignes de 30 px
+   (40 px au doigt), entrée courante sur fond neutre (.atelier-nav-active), intitulé de groupe à la façon de Tab
+   (« Fiches projet », compteur, +), pied dans l'ordre « Exemples de la suite », thème. L'en-tête et le pied ne
+   défilent pas ; seule la zone du milieu défile, en hauteur. */
 .shell {
   display: grid;
   grid-template-columns: var(--side-w) minmax(0, 1fr);
@@ -263,6 +269,7 @@ textarea.field {
   z-index: 25;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   height: 100vh;
   height: 100dvh;
   border-right: 1px solid var(--app-line);
@@ -271,50 +278,56 @@ textarea.field {
 .side-head {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 10px 8px 8px 6px;
+  gap: 4px;
+  flex: none;
+  height: var(--top-h);
+  padding: 0 12px;
 }
 .side-brand {
   min-width: 0;
-  padding: 3px 6px 3px 2px;
+  padding: 0;
 }
-.side-brand:hover {
-  background: var(--surface-hover);
-}
-.side-search {
-  padding: 0 8px 8px;
+/* « Replier le panneau » : seulement quand le panneau est ouvert par-dessus la page (voir « Rail d'icônes »). */
+.side-close {
+  display: none;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  margin-right: -4px;
 }
 .side-nav {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 0 8px 4px;
 }
+/* Zone du milieu : la seule qui défile. Jamais en largeur : les noms longs sont abrégés ; « overflow-x: hidden »
+   n'est qu'une garde. */
 .sidebar__scroll {
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 8px 8px 16px;
+  padding: 4px 8px 12px;
 }
-/* Au pied, au-dessus du thème : entrées de service (« Exemples de la suite »), plus discrètes que les fiches. */
-.sidebar__tools {
+/* Entrées propres au rail d'icônes (« Fiches projet », « Nouvelle fiche », thème en un bouton) : absentes de la
+   barre complète. */
+.side-rail-nav,
+.nav-link.side-rail-only,
+.nav-link.theme-cycle {
+  display: none;
+}
+/* Pied : « Exemples de la suite » (entrée discrète, comme dans Viz et Tab), puis le thème sous un filet. */
+.side-extra {
+  flex: none;
   padding: 4px 8px;
-}
-/* Sélecteur à deux classes : il l'emporte sur `.nav-link`, déclaré plus bas. */
-.nav-link.nav-link--quiet {
-  color: var(--app-muted);
-  font-weight: 400;
-}
-.nav-link.nav-link--quiet:hover {
-  color: var(--app-text);
 }
 .sidebar__foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  min-height: 48px;
-  padding: 8px 8px 8px 12px;
+  flex: none;
+  min-height: 44px;
+  padding: 6px 8px 6px 12px;
   border-top: 1px solid var(--app-line);
 }
 .sidebar-backdrop {
@@ -328,64 +341,52 @@ textarea.field {
   color: var(--app-muted);
 }
 
-.search-trigger {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  height: 30px;
-  padding: 0 6px 0 9px;
-  border: 1px solid var(--app-line);
-  border-radius: var(--ds-radius-md);
-  background: var(--app-field);
-  color: var(--faint);
-  font-size: 13px;
-  cursor: pointer;
-  text-align: left;
-}
-.search-trigger:hover {
-  border-color: var(--line-strong);
-  color: var(--app-muted);
-}
-.search-trigger svg {
-  width: 15px;
-  height: 15px;
-  flex: none;
-}
-.search-trigger span {
-  flex: 1;
-}
-
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  flex: none;
   height: 30px;
   padding: 0 8px;
   border: 0;
   border-radius: var(--ds-radius-md);
   background: none;
   width: 100%;
-  color: var(--app-text);
+  color: color-mix(in oklab, var(--app-text) 80%, transparent);
   font-size: 13px;
   font-weight: 500;
+  white-space: nowrap;
   text-decoration: none;
   text-align: left;
   cursor: pointer;
+  transition: background-color 100ms, color 100ms;
 }
 .nav-link svg {
   width: 16px;
   height: 16px;
   flex: none;
+  stroke-width: 1.75;
   color: var(--faint);
 }
 .nav-link:hover {
   background: var(--surface-hover);
+  color: var(--app-text);
 }
-.nav-link[aria-current="page"] {
+/* Entrée courante : le fond neutre de la marque commune, jamais de barre de couleur. */
+.nav-link.atelier-nav-active,
+.nav-link.atelier-nav-active:hover {
   background: var(--surface-selected);
+  color: var(--app-text);
 }
-.nav-link[aria-current="page"] svg {
+.nav-link.atelier-nav-active svg {
+  color: var(--app-text);
+}
+/* Sélecteur à deux classes : il l'emporte sur `.nav-link` (« Exemples de la suite », plus discret que les fiches). */
+.nav-link.nav-link--quiet {
+  color: var(--app-muted);
+  font-weight: 400;
+}
+.nav-link.nav-link--quiet:hover {
   color: var(--app-text);
 }
 
@@ -437,9 +438,6 @@ textarea.field {
   -webkit-backdrop-filter: blur(10px) saturate(1.4);
   border-bottom: 1px solid var(--app-line);
 }
-.topbar__mobile {
-  display: none;
-}
 .topbar__title {
   margin: 0;
   min-width: 0;
@@ -459,10 +457,15 @@ textarea.field {
   position: relative;
   flex: none;
 }
+/* Sélecteur de la suite : au début de la barre haute, avant le titre (comme dans Viz). */
+.suite-trigger[aria-expanded="true"] {
+  background: var(--surface-selected);
+  color: var(--app-text);
+}
 .suite-menu {
   top: calc(100% + 6px);
   left: 0;
-  width: 336px;
+  width: min(336px, calc(100vw - var(--rail-w) - 24px));
 }
 .suite-menu__item {
   gap: 10px;
@@ -805,13 +808,19 @@ dialog.dialog::backdrop {
 }
 
 /* ── Barre latérale du Hub : liste des fiches ─────────────────────────────── */
+/* Intitulé de groupe, comme ceux des espaces de travail de Tab : 28 px, 11,5 px, discret ; compteur et « + ». */
 .side-section {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 8px 2px 16px;
+  height: 28px;
+  padding: 0 0 0 8px;
 }
 .side-section__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11.5px;
   font-weight: 500;
   color: var(--faint);
@@ -823,25 +832,26 @@ dialog.dialog::backdrop {
   color: var(--faint);
 }
 .side-section .btn {
+  width: 24px;
+  height: 24px;
   margin-left: auto;
 }
-.sidebar__scroll.side-nav {
-  padding: 4px 8px 16px;
-}
+/* Initiale d'une fiche : à la taille d'une icône de navigation (16 px). */
 .nav-link__mark {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   flex: none;
   border-radius: var(--ds-radius-sm);
   background: var(--app-surface-2);
   color: var(--app-muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
+  line-height: 1;
   text-transform: uppercase;
 }
-.nav-link[aria-current="page"] .nav-link__mark {
+.nav-link.atelier-nav-active .nav-link__mark {
   background: var(--app-surface);
   color: var(--app-text);
 }
@@ -1894,39 +1904,74 @@ dialog.dialog::backdrop {
   }
 }
 
-/* ── Téléphone et petite tablette : tiroir, une colonne, base à 14 px ───── */
-@media (max-width: 860px) {
-  body {
-    font-size: 14px;
-  }
+/* ── Rail d'icônes sous 1024 px, comme dans Atelier Viz ──────────────────────
+   Marque, navigation et pied en icônes de 16 px. La liste des fiches n'y tient pas : le bouton « Fiches projet »
+   ouvre le panneau complet par-dessus la page, à la forme du tiroir d'Atelier Tab (300 px au plus, ombre, voile).
+   La même requête est dans lib/shell.ts. */
+@media (max-width: 1023.98px) {
   .shell {
-    display: block;
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  }
+  /* Le panneau ouvert sort du flux : la page garde sa colonne, rien ne bouge dessous. */
+  .main-col {
+    grid-column: 2;
   }
   .topbar {
-    padding: 0 8px;
-    gap: 4px;
+    padding: 0 12px;
   }
-  .topbar__mobile {
-    display: inline-flex;
+
+  .shell[data-nav="closed"] .side-head {
+    justify-content: center;
+    padding: 0;
   }
-  .topbar__title {
+  .shell[data-nav="closed"] .side-brand .atelier-brand__name,
+  .shell[data-nav="closed"] .side-group,
+  .shell[data-nav="closed"] .theme-switch {
     display: none;
   }
-  .sidebar {
+  .shell[data-nav="closed"] .side-rail-nav {
+    display: flex;
+  }
+  .shell[data-nav="closed"] .nav-link.side-rail-only,
+  .shell[data-nav="closed"] .nav-link.theme-cycle {
+    display: flex;
+  }
+  /* Libellés masqués sans les retirer : ils restent le nom lu par les lecteurs d'écran (et l'info-bulle les redit). */
+  .shell[data-nav="closed"] .nav-link {
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    font-size: 0;
+  }
+  .shell[data-nav="closed"] .sidebar__scroll {
+    padding: 0 8px;
+  }
+  .shell[data-nav="closed"] .side-extra {
+    padding: 0 8px 1px;
+  }
+  .shell[data-nav="closed"] .sidebar__foot {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 1px;
+    min-height: 0;
+    padding: 0 8px 8px;
+    border-top: 0;
+  }
+
+  .shell[data-nav="open"] .sidebar {
     position: fixed;
     top: 0;
     left: 0;
     z-index: 50;
-    width: min(300px, 86vw);
-    transform: translateX(-100%);
-    visibility: hidden;
-    transition: transform 220ms var(--ease-out), visibility 0s linear 220ms;
-  }
-  .shell[data-nav="open"] .sidebar {
-    transform: none;
-    visibility: visible;
-    transition: transform 220ms var(--ease-out);
+    width: min(300px, 85vw);
     box-shadow: var(--pop-shadow);
+    animation: side-in 180ms var(--ease-out);
+  }
+  .shell[data-nav="open"] .side-head {
+    padding-right: 8px;
+  }
+  .shell[data-nav="open"] .side-close {
+    display: inline-flex;
   }
   .shell[data-nav="open"] .sidebar-backdrop {
     display: block;
@@ -1935,7 +1980,22 @@ dialog.dialog::backdrop {
     z-index: 45;
     background: var(--scrim);
   }
-  .nav-link,
+}
+@keyframes side-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+/* ── Téléphone et petite tablette : une colonne, base à 14 px ───────────── */
+@media (max-width: 860px) {
+  body {
+    font-size: 14px;
+  }
+  .topbar {
+    gap: 4px;
+  }
   .menu-item {
     min-height: 36px;
   }
@@ -2024,7 +2084,7 @@ dialog.dialog::backdrop {
   }
 }
 
-/* ── Au doigt (téléphone, tablette) : cibles d'au moins 40 px, 44 px pour la navigation ─────────────────── */
+/* ── Au doigt (téléphone, tablette) : cibles d'au moins 40 px (barre latérale comme Viz et Tab) ─────────── */
 @media (pointer: coarse) {
   .btn,
   .btn--sm {
@@ -2060,10 +2120,28 @@ dialog.dialog::backdrop {
   .frise__label {
     min-height: 40px;
   }
-  .nav-link,
+  .nav-link {
+    height: 40px;
+  }
+  .side-close,
+  .suite-trigger,
+  .side-section .btn {
+    width: 40px;
+    height: 40px;
+  }
+  .sidebar .segmented--icons button {
+    width: 40px;
+    height: 40px;
+  }
   .menu-item {
     height: auto;
     min-height: 44px;
+  }
+  .shell[data-nav="closed"] .sidebar__scroll,
+  .shell[data-nav="closed"] .side-extra,
+  .shell[data-nav="closed"] .sidebar__foot {
+    padding-left: 4px;
+    padding-right: 4px;
   }
   .rows__more {
     min-height: 44px;
@@ -2071,10 +2149,6 @@ dialog.dialog::backdrop {
   .field:not(textarea),
   .search-field {
     height: 44px;
-  }
-  .chip {
-    height: 40px;
-    padding: 0 14px;
   }
   .link-btn {
     display: inline-flex;

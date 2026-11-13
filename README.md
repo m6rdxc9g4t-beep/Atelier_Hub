@@ -15,6 +15,10 @@ Une fiche par projet qui rassemble ce que la Suite Atelier en sait, sur un seul 
 
 Le Hub ne recopie aucune donnée : il garde des **références** (projet Projets, espace Wiki, projet Tab, éléments épinglés, sources) et relit les apps à chaque ouverture de fiche, en parallèle et avec un délai borné. Quand tu reviens sur l'onglet du Hub après un passage dans une app, la fiche se relit toute seule si sa lecture date de plus de 30 secondes (le bouton « Actualiser » dit l'heure de la dernière lecture). Une app arrêtée garde son panneau (icône éteinte, message en rouge) et ses éléments épinglés restent cliquables.
 
+## Coquille
+
+Même barre latérale qu'Atelier Viz et Atelier Tab : 232 px, marque « Atelier Hub » en tête (un clic : « À propos »), puis la zone qui défile — « Fiches projet » (compteur, « + » pour une nouvelle fiche, la liste) — et au pied « Exemples de la suite » puis le thème (Système / Clair / Sombre, préférence commune à la suite). Le sélecteur « Suite Atelier » ouvre la barre haute, avant le titre, comme dans Viz. Sous 1024 px (fenêtre étroite, tablette, téléphone), la barre devient un rail d'icônes de 48 px comme celui de Viz ; le bouton « Fiches projet » ouvre la liste complète par-dessus la page, comme le tiroir de Tab (Échap ou « Replier le panneau » la referme, le reste de la page est inerte tant qu'elle est ouverte).
+
 ## Comment une fiche trouve ses éléments
 
 1. **Rattachements** (bandeau sous le titre) : un projet d'Atelier Projets, un espace du Wiki, un projet de Tab. Une pastille « non rattaché » ouvre « Lier » sur son app ; chaque onglet de « Lier » liste tout ce que l'app propose sans rien taper, et la recherche filtre par nom sans casse ni accents. « Nouvelle fiche » peut partir d'un projet d'Atelier Projets qu'aucune fiche n'a encore : son nom et sa description sont repris, le projet est rattaché d'emblée.
