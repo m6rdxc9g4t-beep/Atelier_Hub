@@ -17,7 +17,9 @@ Le Hub ne recopie aucune donnée : il garde des **références** (projet Projets
 
 ## Comment une fiche trouve ses éléments
 
-1. **Rattachements** (bandeau sous le titre) : un projet d'Atelier Projets, un espace du Wiki, un projet de Tab.
+1. **Rattachements** (bandeau sous le titre) : un projet d'Atelier Projets, un espace du Wiki, un projet de Tab. Une pastille « non rattaché » ouvre « Lier » sur son app ; chaque onglet de « Lier » liste tout ce que l'app propose sans rien taper, et la recherche filtre par nom sans casse ni accents. « Nouvelle fiche » peut partir d'un projet d'Atelier Projets qu'aucune fiche n'a encore : son nom et sa description sont repris, le projet est rattaché d'emblée.
+   Un projet rattaché qui n'a pas encore de feature n'affiche pas « 0 / 0 » : le panneau Projets dit ce qu'il contient (phases, epics, stories, tâches, bugs, temps passé) et ce qu'il faut y créer, avec le lien ; la carte « Features » devient « Éléments ». Un projet vide n'a pas de chiffres clés.
+   **Tab sur le serveur** : le Hub lit l'index des tables écrites sur le serveur (par Convert ou Nexus). Les tables ouvertes dans Tab depuis le navigateur restent dans le navigateur (IndexedDB) et le Hub ne peut pas les voir : l'onglet Tab de « Lier » et le panneau Tab le disent.
 2. **Épinglés** (« + » de chaque panneau, ou « Lier un élément ») : une page, un rapport, un jeu de données, une table, une conversion, un agent.
 3. **Mots-clés** de la fiche (par défaut son nom) : un rapport, une table, une conversion ou un jeu de Viz dont le nom les contient apparaît aussi (mots entiers, sans casse ni accents : « KPI CGO » trouve « KPI CGO — Tableau mensuel » et `kpi_cgo_budget_2026`). Sans espace Wiki rattaché, le Wiki est cherché avec le premier mot-clé.
 
@@ -128,7 +130,7 @@ Sur le VPS : les `*_API_URL` restent en bouclage, les `*_URL` deviennent les sou
 
 | App | Routes |
 |---|---|
-| Projets | `GET /api/atelier/projects`, `…/projects/{id}/work-items`, `…/projects/{id}/milestones` (nœud `atelier-node/1`) |
+| Projets | `GET /api/atelier/projects`, `…/projects/{id}/work-items`, `…/projects/{id}/milestones`, `…/projects/{id}/tree` (nombre de phases, d'epics et de stories ; nœud `atelier-node/1`) |
 | Wiki | `GET /api/atelier/spaces`, `GET /api/atelier/pages?space_id=`, `POST /api/atelier/search` |
 | Viz | `GET /api/reports`, `GET /api/datasets` |
 | Convert | `GET /api/conversions` |

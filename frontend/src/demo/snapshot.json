@@ -308,7 +308,16 @@
       "reached": false
      }
     ],
-    "items_total": 11
+    "items_total": 11,
+    "contents": {
+     "phases": 1,
+     "epics": 2,
+     "stories": 3,
+     "features": 6,
+     "tasks": 4,
+     "bugs": 1,
+     "hours_spent": 66.5
+    }
    },
    "wiki": {
     "state": "ok",
@@ -657,7 +666,8 @@
     "features": [],
     "active": [],
     "milestones": [],
-    "items_total": 0
+    "items_total": 0,
+    "contents": null
    },
    "wiki": {
     "state": "ok",
@@ -741,7 +751,16 @@
       "reached": true
      }
     ],
-    "items_total": 4
+    "items_total": 4,
+    "contents": {
+     "phases": 2,
+     "epics": 2,
+     "stories": 2,
+     "features": 0,
+     "tasks": 4,
+     "bugs": 0,
+     "hours_spent": 1.25
+    }
    },
    "wiki": {
     "state": "ok",
@@ -1007,6 +1026,14 @@
      "ref": "5",
      "label": "Refonte du site",
      "detail": null,
+     "bind": true
+    },
+    {
+     "app": "projets",
+     "kind": "project",
+     "ref": "6",
+     "label": "Audit des stocks",
+     "detail": "Inventaire tournant et valorisation des stocks",
      "bind": true
     },
     {

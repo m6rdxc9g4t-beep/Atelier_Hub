@@ -8,6 +8,7 @@ import {
   nexusAgents,
   projetsMilestones,
   projetsProjects,
+  projetsTreeCounts,
   projetsWorkItems,
   tabTables,
   vizDatasets,
@@ -22,7 +23,7 @@ import type { Db } from '../db/database.js'
 import { deepLinks } from '../domain/links.js'
 import { matchesKeywords, parseKeywords, sameName } from '../domain/match.js'
 import { APP_LABELS, rankAgents } from '../domain/relevance.js'
-import { activeItems, computeKpis, milestoneFromRow, sortFeatures, workItemFromRow } from '../domain/summary.js'
+import { activeItems, computeKpis, milestoneFromRow, projetsContents, sortFeatures, workItemFromRow } from '../domain/summary.js'
 import { str, type Row } from '../domain/table.js'
 import type {
   AgentItem,
@@ -41,6 +42,7 @@ import type {
   TableItem,
   WikiPanel,
 } from '../domain/types.js'
+import { TAB_NO_INDEX } from './catalog.js'
 import { getProject, listLinks } from './projects.js'
 
 export interface SuiteContext {
@@ -79,7 +81,7 @@ interface ProjetsResult {
 
 async function loadProjets(ctx: SuiteContext, project: HubProject): Promise<ProjetsResult> {
   const { api, ui } = ctx.config.apps.projets
-  const empty = { features: [], active: [], milestones: [], items_total: 0 }
+  const empty = { features: [], active: [], milestones: [], items_total: 0, contents: null }
   if (!project.projets_id) {
     return {
       panel: { state: 'off', message: 'Aucun projet d’Atelier Projets n’est rattaché à cette fiche.', url: `${ui}/`, project_name: null, ...empty },
@@ -90,10 +92,12 @@ async function loadProjets(ctx: SuiteContext, project: HubProject): Promise<Proj
   const pid = project.projets_id
   const projectUrl = deepLinks.projetsProject(ui, pid)
   try {
-    const [projects, rows, milestoneRows] = await Promise.all([
+    const [projects, rows, milestoneRows, tree] = await Promise.all([
       projetsProjects(ctx.http, api),
       projetsWorkItems(ctx.http, api, pid),
       projetsMilestones(ctx.http, api, pid),
+      // L'arbre ne sert qu'à dire ce que contient un projet sans feature : son absence ne prive pas la fiche du reste.
+      projetsTreeCounts(ctx.http, api, pid).catch(() => null),
     ])
     const info = projects.find((p) => p.id === pid) ?? null
     const items = rows.flatMap((row) => workItemFromRow(row, (id) => deepLinks.projetsItem(ui, pid, id)) ?? [])
@@ -115,6 +119,7 @@ async function loadProjets(ctx: SuiteContext, project: HubProject): Promise<Proj
         active: activeItems(items),
         milestones: [...milestones].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '')),
         items_total: items.length,
+        contents: projetsContents(items, tree),
       },
       kpis: computeKpis(items, milestones, ctx.today()),
       repoSources,
@@ -224,7 +229,7 @@ async function loadTab(ctx: SuiteContext, project: HubProject, links: readonly H
   try {
     const tables = await tabTables(exportsDir)
     if (tables === null) {
-      return { state: 'off', message: 'Index d’Atelier Tab introuvable sur cette machine (Tab n’a encore rien exporté).', url: deepLinks.tabHome(ui), items: fallback() }
+      return { state: 'off', message: TAB_NO_INDEX, url: deepLinks.tabHome(ui), items: fallback() }
     }
     const items = tables
       .filter((t) => pins.has(t.table_id) || sameName(t.project, project.tab_project) || matchesKeywords(t.project, keywords) || matchesKeywords(t.name, keywords))

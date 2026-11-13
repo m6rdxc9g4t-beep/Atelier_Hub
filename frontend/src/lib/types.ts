@@ -60,12 +60,28 @@ export interface Milestone {
   reached: boolean
 }
 
+/**
+ * Ce que contient le projet rattaché, pour le dire quand il n'a pas encore de feature (au lieu de « 0 / 0 »).
+ * phases, epics, stories : lus dans l'arbre du projet (`/tree`) ; null si Projets ne le donne pas.
+ */
+export interface ProjetsContents {
+  phases: number | null
+  epics: number | null
+  stories: number | null
+  features: number
+  tasks: number
+  bugs: number
+  hours_spent: number
+}
+
 export interface ProjetsPanel extends PanelBase {
   project_name: string | null
   features: WorkItem[]
   active: WorkItem[]
   milestones: Milestone[]
   items_total: number
+  /** null tant que le projet n'a pas été lu (non rattaché, Projets injoignable). */
+  contents: ProjetsContents | null
 }
 
 export interface Kpis {

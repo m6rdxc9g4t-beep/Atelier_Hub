@@ -1,7 +1,7 @@
 // Synthèse d'un projet d'Atelier Projets à partir de ses tables `work-items` et `milestones` (docs/SUITE.md §4.3) :
 // features, éléments en cours, temps passé, prochaine échéance. Règles pures, testées.
 
-import type { Kpis, Milestone, WorkItem } from './types.js'
+import type { Kpis, Milestone, ProjetsContents, WorkItem } from './types.js'
 import { num, str, type Row } from './table.js'
 
 /** « En cours » au sens du Hub : ce qui avance ou attend une action (statuts du workflow, §1.4). */
@@ -68,5 +68,19 @@ export function computeKpis(items: readonly WorkItem[], milestones: readonly Mil
     active: counted.filter((item) => ACTIVE_STATUSES.has(item.status)).length,
     blocked: counted.filter((item) => item.status === 'BLOCKED').length,
     next_due: candidates[0] ?? null,
+  }
+}
+
+/** Ce que contient le projet : éléments par type (lignes de `work-items`), phases, epics et stories (arbre). */
+export function projetsContents(items: readonly WorkItem[], tree: { phases: number; epics: number; stories: number } | null): ProjetsContents {
+  const ofType = (type: string) => items.filter((item) => item.type === type).length
+  return {
+    phases: tree?.phases ?? null,
+    epics: tree?.epics ?? null,
+    stories: tree?.stories ?? null,
+    features: ofType('FEATURE'),
+    tasks: ofType('TASK'),
+    bugs: ofType('BUG'),
+    hours_spent: Math.round(items.reduce((sum, item) => sum + item.hours_spent, 0) * 100) / 100,
   }
 }

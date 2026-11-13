@@ -41,6 +41,23 @@ export async function projetsWorkItems(ctx: HttpContext, api: string, projectId:
   return readAtelierTable(await requestJson(ctx, `${api}/api/atelier/projects/${enc(projectId)}/work-items`)).rows
 }
 
+export interface ProjetsTreeCounts {
+  phases: number
+  epics: number
+  stories: number
+}
+
+/** Nombre de phases, d'epics et de stories du projet, comptés dans son arbre (`GET /api/atelier/projects/{id}/tree`). */
+export async function projetsTreeCounts(ctx: HttpContext, api: string, projectId: string): Promise<ProjetsTreeCounts> {
+  const tree = await requestJson(ctx, `${api}/api/atelier/projects/${enc(projectId)}/tree`)
+  if (!isRecord(tree) || !Array.isArray(tree.phases)) throw new AppUnavailable('error', 'réponse inattendue (arbre du projet)')
+  const children = (node: Record<string, unknown>, key: string) => (Array.isArray(node[key]) ? (node[key] as unknown[]).filter(isRecord) : [])
+  const phases = tree.phases.filter(isRecord)
+  const epics = phases.flatMap((p) => children(p, 'epics'))
+  const stories = epics.flatMap((e) => children(e, 'stories'))
+  return { phases: phases.length, epics: epics.length, stories: stories.length }
+}
+
 export async function projetsMilestones(ctx: HttpContext, api: string, projectId: string): Promise<Row[]> {
   return readAtelierTable(await requestJson(ctx, `${api}/api/atelier/projects/${enc(projectId)}/milestones`)).rows
 }
