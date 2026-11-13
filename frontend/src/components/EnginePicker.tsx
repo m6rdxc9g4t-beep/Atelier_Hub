@@ -8,6 +8,7 @@ import { useId } from 'react'
 import {
   answering,
   CLAUDE_MODEL_LABELS,
+  claudeAccess,
   claudeBlocked,
   effectiveChoice,
   effectiveEngine,
@@ -112,7 +113,8 @@ export function EnginePicker({
         ) : status && sent ? (
           <div className="engine__sends">
             <p>
-              Réponse par {answering(prefs, status)}. {sent.lead}
+              Réponse par {answering(prefs, status)}
+              {claudeAccess(prefs, status) && `, ${claudeAccess(prefs, status)}`}. {sent.lead}
             </p>
             {sent.items.length > 0 && (
               <ul>

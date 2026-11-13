@@ -107,6 +107,14 @@ export function answering(prefs: EnginePrefs, status: AiStatus): string {
 }
 
 /**
+ * Accès de Claude dit à côté de « Réponse par … » : « forfait par jeton » quand le Hub utilise le jeton du
+ * forfait (serveur sans session `claude`) ; null sinon. Le jeton lui-même n'arrive jamais jusqu'ici.
+ */
+export function claudeAccess(prefs: EnginePrefs, status: AiStatus): string | null {
+  return effectiveEngine(prefs.engine, status) === 'claude' && status.claude.mode === 'token' ? 'forfait par jeton' : null
+}
+
+/**
  * Champs d'une demande de rédaction : le moteur annoncé, nommé — jamais « auto ». Si l'état a changé entre-temps
  * (Hub repassé hors ligne, Claude déconnecté), le Hub refuse avec sa raison au lieu de répondre par un autre moteur
  * que celui dont la ligne bouclier vient de parler.

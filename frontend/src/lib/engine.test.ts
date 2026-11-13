@@ -5,6 +5,7 @@ import { describe, it } from 'node:test'
 import {
   ALWAYS_SENT,
   answering,
+  claudeAccess,
   claudeBlocked,
   DEFAULT_PREFS,
   effectiveChoice,
@@ -98,6 +99,12 @@ describe('choix du moteur', () => {
     assert.equal(answering(prefs({ engine: 'auto', claudeModel: 'opus' }), online), 'Claude (Opus)')
     assert.equal(answering(prefs({ engine: 'ollama', ollamaModel: 'llama3.2:1b' }), online), 'Ollama (llama3.2:1b)')
     assert.equal(answering(prefs({ engine: 'ollama' }), online), 'Ollama (llama3.1:8b)')
+    // Accès de Claude : dit seulement en mode jeton, et seulement quand Claude répond.
+    assert.equal(claudeAccess(prefs({ engine: 'auto' }), online), null)
+    const token = status({ online: true, claude: { mode: 'token' } })
+    assert.equal(claudeAccess(prefs({ engine: 'auto' }), token), 'forfait par jeton')
+    assert.equal(claudeAccess(prefs({ engine: 'ollama' }), token), null)
+    assert.equal(claudeAccess(prefs({ engine: 'claude' }), { ...token, online: false }), null)
     // En ligne mais Claude absent : grisé avec la raison du Hub, Auto et un « Claude » mémorisé reviennent à Ollama.
     const absent = status({ online: true, claude: { available: false, installed: false, error: 'Claude n’est pas installé sur cette machine' } })
     assert.equal(claudeBlocked(absent), 'Claude n’est pas installé sur cette machine.')
