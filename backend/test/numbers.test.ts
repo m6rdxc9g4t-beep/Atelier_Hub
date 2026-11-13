@@ -52,7 +52,7 @@ describe('nombres présents dans les faits', () => {
   const pool = numbers(`Total : 4,4 M ; hausse de 48 % ; 5 320 lignes ; 1 bloqué ; 5 features terminées sur 8 (63 %) ; 42,5 h ; le 15 décembre 2026`)
 
   it('admet un nombre recopié, même écrit autrement', () => {
-    assert.deepEqual(ungrounded('Environ 4,4 millions, soit 4 412 000 ; hausse de 48 %', pool), [])
+    assert.deepEqual(ungrounded('Environ 4,4 millions ; hausse de 48 %', pool), [])
     // Recopié sans espace de milliers, ou avec une autre espace.
     assert.deepEqual(ungrounded('5320 lignes, ou 5 320, ou 5 320', pool), [])
     assert.deepEqual(ungrounded('42,5 h passées ; 5 features sur 8, soit 63 % ; le 15 décembre 2026', pool), [])
@@ -67,9 +67,11 @@ describe('nombres présents dans les faits', () => {
     // Pourcentage recalculé par le modèle (le complément, une autre base).
     assert.deepEqual(ungrounded('il reste 37 %', pool), ['37 %'])
     assert.deepEqual(ungrounded('soit 60 % des features', pool), ['60 %'])
-    // À la précision écrite près : « 62,5 % » est un arrondi possible de « 63 % », il passe (règle de Viz).
-    assert.deepEqual(ungrounded('soit 62,5 % des features', pool), [])
+    // À la précision du nombre écrit par l'IA, jamais à celle du fait : « 62,5 % » ou « 4 412 000 » sont plus
+    // précis que « 63 % » et « 4,4 M », donc invérifiables (Viz les admettait).
+    assert.deepEqual(ungrounded('soit 62,5 % des features', pool), ['62,5 %'])
     assert.deepEqual(ungrounded('soit 62,4 % des features', pool), ['62,4 %'])
+    assert.deepEqual(ungrounded('soit 4 412 000', pool), ['4 412 000'])
   })
 
   it('compare pourcentage contre pourcentage, et ne répète pas un nombre refusé', () => {
@@ -79,6 +81,26 @@ describe('nombres présents dans les faits', () => {
     assert.deepEqual(ungrounded('7 jours, puis encore 7 jours', pool), ['7'])
     assert.equal(grounded(numbers('4 M')[0]!, pool), true, 'à la précision écrite près')
     assert.equal(grounded(numbers('4,9 M')[0]!, pool), false)
+  })
+
+  it('refuse une décimale ajoutée à un fait arrondi, admet un arrondi plus grossier', () => {
+    const facts = numbers('Temps passé : 1 h ; Budget : 13 k€ ; Avancement : 63 % ; Estimé : 100 h ; Total : 1 280 lignes')
+    assert.deepEqual(ungrounded('1,4 h passées', facts), ['1,4'])
+    assert.deepEqual(ungrounded('un budget de 13 499 €', facts), ['13 499'])
+    assert.deepEqual(ungrounded('avancement de 63,4 %', facts), ['63,4 %'])
+    assert.deepEqual(ungrounded('100,4 h estimées', facts), ['100,4'])
+    assert.deepEqual(ungrounded('1 h passée, 13 k€ de budget, 63 %, 100 h, environ 1,3 k lignes', facts), [])
+  })
+
+  it('compare le signe comme Viz', () => {
+    const facts = numbers('Retard : −12 % ; Avance : 5 j')
+    assert.deepEqual(ungrounded('un retard de +12 %', facts), ['+12 %'])
+    assert.deepEqual(ungrounded('un écart de −12 %', facts), [])
+    assert.deepEqual(ungrounded('un retard de 12 %', facts), [], 'sans signe, si la phrase dit le retard')
+    assert.deepEqual(ungrounded('un écart de 12 %', facts), ['12 %'], 'sans signe ni mot de baisse')
+    assert.deepEqual(ungrounded('une avance de -5 j', facts), ['-5'])
+    assert.deepEqual(ungrounded('une avance de +5 j', facts), [])
+    assert.deepEqual(numbers('−12 %').map((n) => [n.value, n.sign]), [[12, '-']])
   })
 
   it('limite connue : un nombre présent mais mal attribué passe', () => {
